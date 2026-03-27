@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Document
+from .models import AnalysisRequest, Document
 
 
 @admin.register(Document)
@@ -13,3 +13,11 @@ class DocumentAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description='Embedding')
     def has_embedding(self, obj):
         return obj.embedding is not None
+
+
+@admin.register(AnalysisRequest)
+class AnalysisRequestAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'teacher_id', 'student_id', 'student_age', 'created_at')
+    search_fields = ('teacher_id', 'student_id')
+    list_filter = ('created_at',)
+    readonly_fields = ('created_at',)

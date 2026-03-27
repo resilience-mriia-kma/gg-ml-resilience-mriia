@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resilience Screener</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+        h1 { font-size: 1.5rem; }
+        h2 { font-size: 1.1rem; margin-top: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+        .field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+        .field label { font-weight: 600; font-size: 0.85rem; }
+        .field input, .field select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+        .score-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+        .score-group .field label { font-weight: 400; }
+        button { margin-top: 16px; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .error { color: #dc2626; font-size: 0.8rem; }
+        .success { padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; color: #166534; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Resilience Screener — Analysis Request</h1>
+    {% if success %}
+    <div class="success">Analysis request submitted.</div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+
+        <h2>Identification</h2>
+        {% for field in id_fields %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        {% for group in factor_groups %}
+        <h2>{{ group.label }} (items {{ group.items|join:", " }})</h2>
+        <div class="score-group">
+            {% for field in group.fields %}
+            <div class="field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}
+                <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <button type="submit">Submit Analysis Request</button>
+    </form>
+</body>
+</html>
