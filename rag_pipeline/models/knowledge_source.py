@@ -18,7 +18,7 @@ class KnowledgeSource(TimestampMixin):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="source",
+        related_name="knowledge_source",
     )
 
     class Meta:
