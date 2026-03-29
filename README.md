@@ -56,6 +56,6 @@ Visit http://localhost:8000/admin to access the admin panel.
 
 ```
 config/          Django project settings
-core/            Main app (Document model with pgvector embeddings)
+resilience_app/  Backend API (Document model with pgvector embeddings)
 docker-compose.yml   PostgreSQL with pgvector extension
 ```

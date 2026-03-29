@@ -46,7 +46,7 @@ def analysis_form(request):
     else:
         form = AnalysisRequestForm()
 
-    return render(request, 'core/analysis_form.html', {
+    return render(request, 'resilience_app/analysis_form.html', {
         'form': form,
         'id_fields': [form[name] for name in ID_FIELDS],
         'factor_groups': _group_factor_fields(form),
