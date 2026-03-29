@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: resilience-app-db
     image: pgvector/pgvector:pg18
     restart: unless-stopped
     ports:
@@ -15,3 +16,7 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  default:
+    name: resilience-app-network

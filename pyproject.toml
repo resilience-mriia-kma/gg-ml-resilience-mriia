@@ -10,3 +10,29 @@ dependencies = [
     "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.3",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.8",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "DJ",  # flake8-django
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["django", "pgvector"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*" = ["E501"]
