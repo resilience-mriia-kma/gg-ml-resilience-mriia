@@ -14,8 +14,8 @@ class Document(TimestampMixin):
     embedded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'Processed Document'
-        verbose_name_plural = 'Processed Documents'
+        verbose_name = "Processed Document"
+        verbose_name_plural = "Processed Documents"
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.title}"
@@ -25,7 +25,7 @@ class Document(TimestampMixin):
 
 
 class DocumentChunk(TimestampMixin):
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='chunks')
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
     content = models.TextField(null=False, blank=False)
     token_count = models.PositiveIntegerField(default=0)
     embedding = VectorField(dimensions=DIMENSIONALITY, null=True, blank=True)
@@ -34,15 +34,15 @@ class DocumentChunk(TimestampMixin):
         # TODO: configure vector index parameters (M, efConstruction) based on dataset size and expected query patterns
         indexes = [
             HnswIndex(
-                name='document_embedding_idx',
-                fields=['embedding'],
+                name="document_embedding_idx",
+                fields=["embedding"],
                 m=16,
                 ef_construction=64,
-                opclasses=['vector_cosine_ops'],
+                opclasses=["vector_cosine_ops"],
             ),
         ]
-        verbose_name = 'Document Chunk'
-        verbose_name_plural = 'Document Chunks'
+        verbose_name = "Document Chunk"
+        verbose_name_plural = "Document Chunks"
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.title}"

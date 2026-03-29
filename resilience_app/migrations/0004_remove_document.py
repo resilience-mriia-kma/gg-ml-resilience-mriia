@@ -4,10 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('resilience_app', '0003_analysisrequest'),
-        ('rag_pipeline', '0001_document'),
+        ("resilience_app", "0003_analysisrequest"),
+        ("rag_pipeline", "0001_document"),
     ]
 
     # State-only: remove Document from this app's state.
@@ -15,7 +14,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.SeparateDatabaseAndState(
             state_operations=[
-                migrations.DeleteModel(name='Document'),
+                migrations.DeleteModel(name="Document"),
             ],
             database_operations=[],
         ),

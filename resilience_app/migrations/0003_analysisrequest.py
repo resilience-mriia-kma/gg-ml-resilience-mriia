@@ -4,24 +4,26 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('resilience_app', '0002_initial'),
+        ("resilience_app", "0002_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AnalysisRequest',
+            name="AnalysisRequest",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('teacher_id', models.CharField(max_length=128)),
-                ('student_id', models.CharField(max_length=128)),
-                ('student_age', models.PositiveSmallIntegerField()),
-                ('student_gender', models.CharField(max_length=64)),
-                ('scores', models.JSONField(help_text='Dict of factor_key -> list of scores (0/1/2/NA)')),
-                ('profile', models.JSONField(blank=True, default=dict, help_text='Dict of factor_key -> low/medium/high')),
-                ('recommendations', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("teacher_id", models.CharField(max_length=128)),
+                ("student_id", models.CharField(max_length=128)),
+                ("student_age", models.PositiveSmallIntegerField()),
+                ("student_gender", models.CharField(max_length=64)),
+                ("scores", models.JSONField(help_text="Dict of factor_key -> list of scores (0/1/2/NA)")),
+                (
+                    "profile",
+                    models.JSONField(blank=True, default=dict, help_text="Dict of factor_key -> low/medium/high"),
+                ),
+                ("recommendations", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
     ]
