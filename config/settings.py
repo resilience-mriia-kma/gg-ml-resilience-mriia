@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     'resilience_app',
+    'rag_pipeline',
 ]
 
 MIDDLEWARE = [
