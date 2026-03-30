@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.postgres",
     "resilience_app",
     "rag_pipeline",
 ]
@@ -121,3 +120,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+
+# FAISS vector index
+
+FAISS_INDEX_PATH = Path(env("FAISS_INDEX_PATH", default=str(BASE_DIR / "data" / "faiss" / "chunks.index")))
