@@ -1,7 +1,7 @@
+from django.apps import apps
 from django.core.management.base import BaseCommand
 
 from rag_pipeline.models import Document, EmbeddingStatus
-from rag_pipeline.retrieval.container import get_vector_store
 
 
 class Command(BaseCommand):
@@ -15,7 +15,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
-        store = get_vector_store()
+        container = apps.get_app_config("rag_pipeline").container
+        store = container.vector_store()
 
         queryset = Document.objects.all()
         if options["status"]:

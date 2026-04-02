@@ -1,7 +1,6 @@
 import numpy as np
+from django.apps import apps
 from django.core.management.base import BaseCommand
-
-from rag_pipeline.retrieval.container import get_repository, get_vector_index
 
 
 class Command(BaseCommand):
@@ -11,8 +10,9 @@ class Command(BaseCommand):
         parser.add_argument("--repair", action="store_true", help="Auto-repair detected drift")
 
     def handle(self, **options):
-        index = get_vector_index()
-        repo = get_repository()
+        container = apps.get_app_config("rag_pipeline").container
+        index = container.faiss_index()
+        repo = container.repository()
 
         pg_ids = repo.get_all_chunk_ids()
         faiss_ids = set(index.get_all_ids().tolist())

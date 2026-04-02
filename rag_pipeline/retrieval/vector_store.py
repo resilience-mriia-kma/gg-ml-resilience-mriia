@@ -26,45 +26,45 @@ class VectorStore:
     """
 
     def __init__(self, index: IVectorIndex, embedder: IEmbedder, repository: IDocumentRepository) -> None:
-        self._index = index
-        self._embedder = embedder
-        self._repo = repository
+        self.index = index
+        self.embedder = embedder
+        self.repo = repository
 
     def index_document(self, document: Document) -> int:
         """Embed all chunks and add to the vector index. Returns count of indexed chunks."""
-        chunks = self._repo.get_ordered_chunks(document)
+        chunks = self.repo.get_ordered_chunks(document)
         if not chunks:
             logger.warning("Document %d has no chunks to index", document.pk)
             return 0
 
         texts = [c.content for c in chunks]
-        vectors = self._embedder.embed_batch(texts)
+        vectors = self.embedder.embed_batch(texts)
         ids = np.array([c.pk for c in chunks], dtype=np.int64)
 
-        self._index.add(ids, vectors)
-        self._index.save()
-        self._repo.update_document_status(document, EmbeddingStatus.INDEXED)
+        self.index.add(ids, vectors)
+        self.index.save()
+        self.repo.update_document_status(document, EmbeddingStatus.INDEXED)
 
         logger.info("Indexed %d chunks for document %d", len(chunks), document.pk)
         return len(chunks)
 
     def remove_document(self, document: Document) -> int:
         """Remove all chunk vectors from the index. Returns count of removed chunks."""
-        chunk_ids = self._repo.get_chunk_ids(document)
+        chunk_ids = self.repo.get_chunk_ids(document)
         if not chunk_ids:
             return 0
 
-        self._index.remove(np.array(chunk_ids, dtype=np.int64))
-        self._index.save()
-        self._repo.update_document_status(document, EmbeddingStatus.PENDING)
+        self.index.remove(np.array(chunk_ids, dtype=np.int64))
+        self.index.save()
+        self.repo.update_document_status(document, EmbeddingStatus.PENDING)
 
         logger.info("Removed %d chunks for document %d", len(chunk_ids), document.pk)
         return len(chunk_ids)
 
     def search(self, query: str, k: int = 10) -> list[SearchResult]:
         """Embed query, search index, hydrate from DB preserving rank order."""
-        query_vec = self._embedder.embed(query).reshape(1, -1)
-        distances, ids = self._index.search(query_vec, k)
+        query_vec = self.embedder.embed(query).reshape(1, -1)
+        distances, ids = self.index.search(query_vec, k)
 
         # FAISS returns -1 for unfilled slots
         valid_mask = ids[0] != -1
@@ -74,7 +74,7 @@ class VectorStore:
         if not chunk_ids:
             return []
 
-        chunks_by_pk = self._repo.get_chunks_by_ids(chunk_ids)
+        chunks_by_pk = self.repo.get_chunks_by_ids(chunk_ids)
 
         # Preserve FAISS ranking, skip any chunks missing from DB (drift)
         results = []

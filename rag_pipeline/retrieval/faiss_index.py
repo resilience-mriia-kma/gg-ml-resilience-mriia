@@ -21,26 +21,26 @@ class FAISSIndex(IVectorIndex):
     """
 
     def __init__(self, dimension: int, index_path: Path) -> None:
-        self._dimension = dimension
-        self._index_path = index_path
-        self._index: faiss.IndexIDMap | None = None
+        self.dimension = dimension
+        self.index_path = index_path
+        self.faiss_index: faiss.IndexIDMap | None = None
 
     def load_or_create(self) -> None:
-        if self._index_path.exists():
-            self._index = faiss.read_index(str(self._index_path))
-            logger.info("Loaded FAISS index from %s (%d vectors)", self._index_path, self.count)
+        if self.index_path.exists():
+            self.faiss_index = faiss.read_index(str(self.index_path))
+            logger.info("Loaded FAISS index from %s (%d vectors)", self.index_path, self.count)
         else:
-            inner = faiss.IndexFlatIP(self._dimension)
-            self._index = faiss.IndexIDMap(inner)
-            logger.info("Created new FAISS index (dim=%d)", self._dimension)
+            inner = faiss.IndexFlatIP(self.dimension)
+            self.faiss_index = faiss.IndexIDMap(inner)
+            logger.info("Created new FAISS index (dim=%d)", self.dimension)
 
     def save(self) -> None:
-        self._index_path.parent.mkdir(parents=True, exist_ok=True)
+        self.index_path.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write: write to temp file, then rename
-        with tempfile.NamedTemporaryFile(dir=self._index_path.parent, delete=False, suffix=".tmp") as tmp:
+        with tempfile.NamedTemporaryFile(dir=self.index_path.parent, delete=False, suffix=".tmp") as tmp:
             faiss.write_index(self._ensure_index(), tmp.name)
-            Path(tmp.name).replace(self._index_path)
-        logger.info("Saved FAISS index to %s (%d vectors)", self._index_path, self.count)
+            Path(tmp.name).replace(self.index_path)
+        logger.info("Saved FAISS index to %s (%d vectors)", self.index_path, self.count)
 
     def add(self, ids: NDArray[np.int64], vectors: NDArray[np.float32]) -> None:
         self._ensure_index().add_with_ids(vectors, ids)
@@ -63,6 +63,6 @@ class FAISSIndex(IVectorIndex):
         return self._ensure_index().ntotal
 
     def _ensure_index(self) -> faiss.IndexIDMap:
-        if self._index is None:
+        if self.faiss_index is None:
             raise RuntimeError("FAISS index not initialized — call load_or_create() first")
-        return self._index
+        return self.faiss_index

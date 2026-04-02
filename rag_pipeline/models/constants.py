@@ -1,8 +1,6 @@
 from django.db import models
 
-# TODO: make this configurable and consistent with the embedding logic
-MAX_CHUNK_TOKENS = 512
-DIMENSIONALITY = 1536
+from rag_pipeline.constants import DIMENSIONALITY, MAX_CHUNK_TOKENS  # noqa: F401
 
 
 class SourceType(models.TextChoices):

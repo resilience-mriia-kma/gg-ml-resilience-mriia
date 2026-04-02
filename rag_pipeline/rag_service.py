@@ -1,0 +1,33 @@
+from dataclasses import dataclass
+
+from rag_pipeline.llm.prompt_builder import PromptBuilder
+from rag_pipeline.llm.protocols import ILLMService
+from rag_pipeline.retrieval.dtos import RetrievalResult
+from rag_pipeline.retrieval.retrieval_service import RetrievalService
+
+
+@dataclass(frozen=True)
+class RAGResponse:
+    answer: str
+    sources: list[RetrievalResult]
+
+
+class RAGService:
+    def __init__(
+        self,
+        retrieval_service: RetrievalService,
+        llm_service: ILLMService,
+        prompt_builder: PromptBuilder,
+    ) -> None:
+        self.retrieval_service = retrieval_service
+        self.llm_service = llm_service
+        self.prompt_builder = prompt_builder
+
+    def answer(self, query: str, *, top_k: int = 5) -> RAGResponse:
+        chunks = self.retrieval_service.retrieve(query, top_k=top_k)
+
+        system_prompt = self.prompt_builder.build_system_prompt()
+        user_prompt = self.prompt_builder.build_user_prompt(query, chunks)
+        answer = self.llm_service.generate(system_prompt, user_prompt)
+
+        return RAGResponse(answer=answer, sources=chunks)
