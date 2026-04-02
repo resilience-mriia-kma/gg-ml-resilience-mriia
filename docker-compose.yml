@@ -1,7 +1,7 @@
 services:
   db:
     container_name: resilience-app-db
-    image: pgvector/pgvector:pg18
+    image: postgres:18
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

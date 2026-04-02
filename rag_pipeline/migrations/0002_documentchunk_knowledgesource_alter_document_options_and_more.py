@@ -7,82 +7,106 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('rag_pipeline', '0001_document'),
+        ("rag_pipeline", "0001_document"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DocumentChunk',
+            name="DocumentChunk",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('content', models.TextField()),
-                ('token_count', models.PositiveIntegerField(default=0)),
-                ('embedding', pgvector.django.vector.VectorField(blank=True, dimensions=1536, null=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("content", models.TextField()),
+                ("token_count", models.PositiveIntegerField(default=0)),
+                ("embedding", pgvector.django.vector.VectorField(blank=True, dimensions=1536, null=True)),
             ],
             options={
-                'verbose_name': 'Document Chunk',
-                'verbose_name_plural': 'Document Chunks',
+                "verbose_name": "Document Chunk",
+                "verbose_name_plural": "Document Chunks",
             },
         ),
         migrations.CreateModel(
-            name='KnowledgeSource',
+            name="KnowledgeSource",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('title', models.CharField(max_length=512)),
-                ('source_type', models.CharField(choices=[('file', 'File upload'), ('url', 'Web page URL'), ('text', 'Pasted text')], max_length=16)),
-                ('file', models.FileField(blank=True, upload_to='raw_sources/')),
-                ('url', models.URLField(blank=True)),
-                ('text', models.TextField(blank=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("title", models.CharField(max_length=512)),
+                (
+                    "source_type",
+                    models.CharField(
+                        choices=[("file", "File upload"), ("url", "Web page URL"), ("text", "Pasted text")],
+                        max_length=16,
+                    ),
+                ),
+                ("file", models.FileField(blank=True, upload_to="raw_sources/")),
+                ("url", models.URLField(blank=True)),
+                ("text", models.TextField(blank=True)),
             ],
             options={
-                'verbose_name': 'Raw Knowledge Base Source',
-                'verbose_name_plural': 'Raw Knowledge Base Sources',
+                "verbose_name": "Raw Knowledge Base Source",
+                "verbose_name_plural": "Raw Knowledge Base Sources",
             },
         ),
         migrations.AlterModelOptions(
-            name='document',
-            options={'verbose_name': 'Processed Document', 'verbose_name_plural': 'Processed Documents'},
+            name="document",
+            options={"verbose_name": "Processed Document", "verbose_name_plural": "Processed Documents"},
         ),
         migrations.RemoveIndex(
-            model_name='document',
-            name='document_embedding_idx',
+            model_name="document",
+            name="document_embedding_idx",
         ),
         migrations.AddField(
-            model_name='document',
-            name='embedded_at',
+            model_name="document",
+            name="embedded_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='document',
-            name='source',
-            field=models.CharField(blank=True, choices=[('file', 'File upload'), ('url', 'Web page URL'), ('text', 'Pasted text')], max_length=16, null=True),
+            model_name="document",
+            name="source",
+            field=models.CharField(
+                blank=True,
+                choices=[("file", "File upload"), ("url", "Web page URL"), ("text", "Pasted text")],
+                max_length=16,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='documentchunk',
-            name='document',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='chunks', to='rag_pipeline.document'),
+            model_name="documentchunk",
+            name="document",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, related_name="chunks", to="rag_pipeline.document"
+            ),
         ),
         migrations.AddField(
-            model_name='knowledgesource',
-            name='document',
-            field=models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='knowledge_source', to='rag_pipeline.document'),
+            model_name="knowledgesource",
+            name="document",
+            field=models.OneToOneField(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="knowledge_source",
+                to="rag_pipeline.document",
+            ),
         ),
         migrations.RemoveField(
-            model_name='document',
-            name='content',
+            model_name="document",
+            name="content",
         ),
         migrations.RemoveField(
-            model_name='document',
-            name='embedding',
+            model_name="document",
+            name="embedding",
         ),
         migrations.AddIndex(
-            model_name='documentchunk',
-            index=pgvector.django.indexes.HnswIndex(ef_construction=64, fields=['embedding'], m=16, name='document_embedding_idx', opclasses=['vector_cosine_ops']),
+            model_name="documentchunk",
+            index=pgvector.django.indexes.HnswIndex(
+                ef_construction=64,
+                fields=["embedding"],
+                m=16,
+                name="document_embedding_idx",
+                opclasses=["vector_cosine_ops"],
+            ),
         ),
     ]
