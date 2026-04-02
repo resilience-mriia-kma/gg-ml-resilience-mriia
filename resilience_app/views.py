@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.views import View
 
 from .constants import FACTORS
+from .container import ResilienceContainer
 from .forms import AnalysisRequestForm
 from .models import AnalysisRequest
 from .recommendation_service import RecommendationService
@@ -25,7 +26,7 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: RecommendationService = Provide["recommendation_service"],
+        recommendation_service: RecommendationService = Provide[ResilienceContainer.recommendation_service],
         **kwargs,
     ):
         super().__init__(**kwargs)

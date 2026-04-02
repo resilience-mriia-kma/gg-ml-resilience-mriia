@@ -121,11 +121,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-
-# FAISS vector index
-
-FAISS_INDEX_PATH = Path(env("FAISS_INDEX_PATH", default=str(BASE_DIR / "data" / "faiss" / "chunks.index")))
-
 # OpenAI
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 OPENAI_LLM_MODEL = env("OPENAI_LLM_MODEL", default="gpt-4o-mini")

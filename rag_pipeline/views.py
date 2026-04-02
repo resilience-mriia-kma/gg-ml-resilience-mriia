@@ -4,12 +4,13 @@ from dependency_injector.wiring import Provide, inject
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
+from rag_pipeline.container import RAGContainer
 from rag_pipeline.rag_service import RAGService
 
 
 @require_POST
 @inject
-def query(request, rag_service: RAGService = Provide["rag_service"]):
+def query(request, rag_service: RAGService = Provide[RAGContainer.rag_service]):
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
