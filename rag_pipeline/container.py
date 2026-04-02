@@ -5,16 +5,21 @@ from rag_pipeline.constants import DIMENSIONALITY
 from rag_pipeline.embedding.openai_embedding_service import OpenAIEmbeddingService
 from rag_pipeline.llm.openai_llm_service import OpenAILLMService
 from rag_pipeline.llm.prompt_builder import PromptBuilder
-from rag_pipeline.rag_service import RAGService
 from rag_pipeline.retrieval.faiss_index import FAISSIndex
-from rag_pipeline.retrieval.retrieval_service import RetrievalService
-from resilience_app.recommendation_service import RecommendationService
 
 
 def build_rag_container() -> containers.DynamicContainer:
-    """Build the RAG container. Must be called after Django apps are ready (model imports are deferred)."""
+    """Build the RAG container.
+
+    Imports that transitively touch Django models (VectorStore, Repository,
+    RetrievalService, RAGService, RecommendationService) are deferred to
+    this function because Django's app registry is not ready at module-load time.
+    """
+    from rag_pipeline.rag_service import RAGService
     from rag_pipeline.retrieval.repository import DocumentRepository
+    from rag_pipeline.retrieval.retrieval_service import RetrievalService
     from rag_pipeline.retrieval.vector_store import VectorStore
+    from resilience_app.recommendation_service import RecommendationService
 
     container = containers.DynamicContainer()
 
