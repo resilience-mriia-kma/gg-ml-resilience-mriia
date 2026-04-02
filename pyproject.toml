@@ -9,7 +9,6 @@ dependencies = [
     "django>=6.0.3",
     "django-environ>=0.13.0",
     "openai>=1.0.0",
-    "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.3",
 ]
 
@@ -34,7 +33,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-third-party = ["django", "openai", "pgvector"]
+known-third-party = ["django", "openai"]
 
 [tool.ruff.lint.per-file-ignores]
 "*/migrations/*" = ["E501"]
