@@ -124,3 +124,6 @@ STATIC_URL = "static/"
 # OpenAI
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 OPENAI_LLM_MODEL = env("OPENAI_LLM_MODEL", default="gpt-4o-mini")
+
+# FAISS vector index
+FAISS_INDEX_PATH = BASE_DIR / "faiss_store" / "index.bin"

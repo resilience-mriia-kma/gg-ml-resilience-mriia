@@ -45,7 +45,7 @@ def _split_into_chunks(text: str) -> list[str]:
     return chunks
 
 
-def _parse_docx(filepath: str) -> list[dict]:
+def _parse_docx(filepath: str, resilience_factor: str = "") -> list[dict]:
     from docx import Document as DocxDocument
 
     doc = DocxDocument(filepath)
@@ -54,17 +54,21 @@ def _parse_docx(filepath: str) -> list[dict]:
     chunk_index = 0
     current_factor = ""
 
+    if resilience_factor:
+        current_factor = resilience_factor
+
     for row_idx, row in enumerate(table.rows):
         if row_idx == 0:
             continue  # skip header row
 
-        theme_text = row.cells[0].text.strip().lower()
-        matched = next(
-            (factor for theme, factor in THEME_TO_FACTOR.items() if theme_text.startswith(theme)),
-            None,
-        )
-        if matched is not None:
-            current_factor = matched
+        if not resilience_factor:
+            theme_text = row.cells[0].text.strip().lower()
+            matched = next(
+                (factor for theme, factor in THEME_TO_FACTOR.items() if theme_text.startswith(theme)),
+                None,
+            )
+            if matched is not None:
+                current_factor = matched
 
         for col_idx, cell in enumerate(row.cells):
             category = COLUMN_TO_CATEGORY.get(col_idx)
@@ -99,10 +103,33 @@ _PDF_COLUMN_HEADERS = {
 }
 
 
-def _parse_pdf(filepath: str) -> list[dict]:
+def _parse_pdf(filepath: str, resilience_factor: str = "") -> list[dict]:
     from pypdf import PdfReader
 
     reader = PdfReader(filepath)
+
+    if resilience_factor:
+        # Plain mode: extract all text, chunk by token count, tag with the given factor.
+        chunks = []
+        chunk_index = 0
+        for page in reader.pages:
+            page_text = (page.extract_text() or "").strip()
+            if not page_text:
+                continue
+            for chunk_text in _split_into_chunks(page_text):
+                chunks.append(
+                    {
+                        "content": chunk_text,
+                        "resilience_factor": resilience_factor,
+                        "category": "",
+                        "token_count": _token_count(chunk_text),
+                        "chunk_index": chunk_index,
+                    }
+                )
+                chunk_index += 1
+        return chunks
+
+    # Heading-detection mode: look for resilience-factor and category headings in text.
     full_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     chunks = []
@@ -162,19 +189,23 @@ def _parse_pdf(filepath: str) -> list[dict]:
     return chunks
 
 
-def import_file(filepath: str) -> list[dict]:
+def import_file(filepath: str, resilience_factor: str = "") -> list[dict]:
     """
     Parse .docx or .pdf file and return list of chunks.
 
     Each chunk dict contains:
         content           – text of the chunk
         resilience_factor – e.g. "family_support"
-        category          – e.g. "interventions"
+        category          – e.g. "interventions" (empty for plain-PDF mode)
         token_count       – number of tokens in this chunk
         chunk_index       – sequential index across all chunks in the file
+
+    When resilience_factor is provided the parsers skip heading detection and
+    assign the given value to every chunk.  When it is empty the parsers fall
+    back to content-based heading detection (original behaviour).
     """
     if filepath.endswith(".docx"):
-        return _parse_docx(filepath)
+        return _parse_docx(filepath, resilience_factor=resilience_factor)
     if filepath.endswith(".pdf"):
-        return _parse_pdf(filepath)
+        return _parse_pdf(filepath, resilience_factor=resilience_factor)
     raise ValueError(f"Unsupported file type: {filepath!r}. Expected .docx or .pdf.")

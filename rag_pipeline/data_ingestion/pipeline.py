@@ -18,7 +18,7 @@ def run_pipeline(knowledge_source: KnowledgeSource) -> Document:
       3. Embed chunks and add to FAISS index
       4. Link KnowledgeSource to the Document
     """
-    raw_chunks = import_file(knowledge_source.file.path)
+    raw_chunks = import_file(knowledge_source.file.path, resilience_factor=knowledge_source.resilience_factor)
     if not raw_chunks:
         raise ValueError("No chunks extracted from file")
 
