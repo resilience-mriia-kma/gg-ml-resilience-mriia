@@ -38,7 +38,7 @@ class VectorStore:
             return 0
 
         texts = [c.content for c in chunks]
-        vectors = self.embedder.embed_batch(texts)
+        vectors = np.array(self.embedder.embed_batch(texts), dtype=np.float32)
         ids = np.array([c.pk for c in chunks], dtype=np.int64)
 
         self.index.add(ids, vectors)
@@ -63,7 +63,7 @@ class VectorStore:
 
     def search(self, query: str, k: int = 10) -> list[SearchResult]:
         """Embed query, search index, hydrate from DB preserving rank order."""
-        query_vec = self.embedder.embed(query).reshape(1, -1)
+        query_vec = np.array(self.embedder.embed(query), dtype=np.float32).reshape(1, -1)
         distances, ids = self.index.search(query_vec, k)
 
         # FAISS returns -1 for unfilled slots
