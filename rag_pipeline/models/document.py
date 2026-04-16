@@ -28,6 +28,8 @@ class Document(TimestampMixin):
 class DocumentChunk(TimestampMixin):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
     content = models.TextField(null=False, blank=False)
+    resilience_factor = models.CharField(max_length=64, blank=True, db_index=True)
+    # values: "family_support", "optimism", "goal_directedness", "social_connections", "health", or "" if unknown
     token_count = models.PositiveIntegerField(default=0)
     chunk_index = models.PositiveIntegerField(default=0)
 
