@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from rag_pipeline.llm.protocols import ILLMService, IPromptBuilder
+from rag_pipeline.protocols import IRAGService
 from rag_pipeline.retrieval.dtos import RetrievalResult
 from rag_pipeline.retrieval.protocols import IRetrievalService
 
@@ -11,7 +12,7 @@ class RAGResponse:
     sources: list[RetrievalResult]
 
 
-class RAGService:
+class RAGService(IRAGService):
     def __init__(
         self,
         retrieval_service: IRetrievalService,

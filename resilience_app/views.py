@@ -7,7 +7,7 @@ from .constants import FACTORS
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm
 from .models import AnalysisRequest
-from .recommendation_service import RecommendationService
+from .protocols import IRecommendationService
 
 ID_FIELDS = ["teacher_id", "student_id", "student_age", "student_gender"]
 
@@ -16,9 +16,6 @@ def index(request):
     return JsonResponse({"status": "ok", "message": "ml-resilience-mriia"})
 
 
-# TODO: these are initial demo views
-# TODO: they do not reflect the final product and will be rewritten
-
 
 class AnalysisFormView(View):
     template_name = "resilience_app/analysis_form.html"
@@ -26,7 +23,7 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: RecommendationService = Provide[ResilienceContainer.recommendation_service],
+        recommendation_service: IRecommendationService = Provide[ResilienceContainer.recommendation_service],
         **kwargs,
     ):
         super().__init__(**kwargs)
