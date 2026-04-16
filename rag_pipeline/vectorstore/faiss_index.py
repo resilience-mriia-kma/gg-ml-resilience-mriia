@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class FAISSIndex(IVectorIndex):
     """IVectorIndex implementation backed by FAISS IndexIDMap(IndexFlatIP).
 
-    Responsibilities: load/save/add/remove/search.
-    No Django or business logic — pure vector operations.
+    Responsibilities: load/save/add/remove/search vectors.
+    Does not handle embedding or persistence of metadata.
     """
 
     def __init__(self, dimension: int, index_path: Path) -> None:
@@ -28,19 +28,18 @@ class FAISSIndex(IVectorIndex):
     def load_or_create(self) -> None:
         if self.index_path.exists():
             self.faiss_index = faiss.read_index(str(self.index_path))
-            logger.info("Loaded FAISS index from %s (%d vectors)", self.index_path, self.count)
+            logger.info(f"Loaded FAISS index from {self.index_path} ({self.count} vectors)")
         else:
             inner = faiss.IndexFlatIP(self.dimension)
             self.faiss_index = faiss.IndexIDMap(inner)
-            logger.info("Created new FAISS index (dim=%d)", self.dimension)
+            logger.info(f"Created new FAISS index (dim={self.dimension})")
 
     def save(self) -> None:
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        # Atomic write: write to temp file, then rename
         with tempfile.NamedTemporaryFile(dir=self.index_path.parent, delete=False, suffix=".tmp") as tmp:
             faiss.write_index(self._ensure_index(), tmp.name)
             Path(tmp.name).replace(self.index_path)
-        logger.info("Saved FAISS index to %s (%d vectors)", self.index_path, self.count)
+        logger.info(f"Saved FAISS index to {self.index_path} ({self.count} vectors)")
 
     def add(self, ids: NDArray[np.int64], vectors: NDArray[np.float32]) -> None:
         self._ensure_index().add_with_ids(vectors, ids)

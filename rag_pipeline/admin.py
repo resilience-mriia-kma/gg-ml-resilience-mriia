@@ -1,9 +1,8 @@
 import logging
 
-from django.apps import apps
 from django.contrib import admin
 
-from .data_ingestion.pipeline import run_pipeline
+from .apps import RagPipelineConfig
 from .models import Document, DocumentChunk, KnowledgeSource
 
 logger = logging.getLogger(__name__)
@@ -18,15 +17,16 @@ class KnowledgeSourceAdmin(admin.ModelAdmin):
 
     @admin.action(description="Process selected sources (parse → embed → index)")
     def process_selected(self, request, queryset):
+        pipeline = RagPipelineConfig.get_container().ingestion_pipeline()
         succeeded = []
         failed = []
 
         for ks in queryset:
             try:
-                run_pipeline(ks)
+                pipeline.ingest_knowledge_source(ks)
                 succeeded.append(ks.title)
             except Exception as exc:
-                logger.exception("Failed to process KnowledgeSource id=%s title=%r", ks.pk, ks.title)
+                logger.exception(f"Failed to process KnowledgeSource id={ks.pk} title={ks.title!r}")
                 failed.append(f"{ks.title!r}: {exc}")
 
         if succeeded:
@@ -50,7 +50,7 @@ class DocumentAdmin(admin.ModelAdmin):
 
     @admin.action(description="Embed selected documents (re-index into FAISS)")
     def embed_selected(self, request, queryset):
-        vector_store = apps.get_app_config("rag_pipeline").container.vector_store()
+        vector_store = RagPipelineConfig.get_container().vector_store()
         succeeded = []
         failed = []
 
@@ -59,7 +59,7 @@ class DocumentAdmin(admin.ModelAdmin):
                 count = vector_store.reindex_document(doc)
                 succeeded.append(f"{doc.title} ({count} chunks)")
             except Exception as exc:
-                logger.exception("Failed to embed Document id=%s title=%r", doc.pk, doc.title)
+                logger.exception(f"Failed to embed Document id={doc.pk} title={doc.title!r}")
                 failed.append(f"{doc.title!r}: {exc}")
 
         if succeeded:

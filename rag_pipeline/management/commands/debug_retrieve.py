@@ -1,5 +1,6 @@
-from django.apps import apps
 from django.core.management.base import BaseCommand
+
+from rag_pipeline.apps import RagPipelineConfig
 
 
 class Command(BaseCommand):
@@ -11,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument("--no-llm", action="store_true", help="Only show retrieved chunks, skip LLM generation")
 
     def handle(self, **options):
-        container = apps.get_app_config("rag_pipeline").container
+        container = RagPipelineConfig.get_container()
         question = options["question"]
         top_k = options["top_k"]
 

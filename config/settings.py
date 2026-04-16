@@ -127,3 +127,6 @@ OPENAI_LLM_MODEL = env("OPENAI_LLM_MODEL", default="gpt-4o-mini")
 
 # FAISS vector index
 FAISS_INDEX_PATH = BASE_DIR / "faiss_store" / "index.bin"
+
+# Knowledge base sources directory
+RAW_SOURCES_DIR = env("RAW_SOURCES_DIR", default=str(BASE_DIR / "raw_sources"))

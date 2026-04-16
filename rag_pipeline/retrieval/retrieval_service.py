@@ -1,5 +1,6 @@
 from rag_pipeline.retrieval.dtos import RetrievalResult
-from rag_pipeline.retrieval.protocols import IRetrievalService, IVectorStore
+from rag_pipeline.retrieval.protocols import IRetrievalService
+from rag_pipeline.vectorstore.protocols import IVectorStore
 
 
 class RetrievalService(IRetrievalService):

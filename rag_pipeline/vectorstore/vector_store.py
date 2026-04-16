@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStore(IVectorStore):
-    """Bridges the vector index and document persistence.
+    """
+    Bridges the vector index and document persistence.
 
     Single entry point for all index+DB coordination.
     Depends on abstractions (IVectorIndex, IEmbeddingService, IDocumentRepository), not concretions.
@@ -29,7 +30,7 @@ class VectorStore(IVectorStore):
         """Embed all chunks and add to the vector index. Returns count of indexed chunks."""
         chunks = self.repository.get_ordered_chunks(document)
         if not chunks:
-            logger.warning("Document %d has no chunks to index", document.pk)
+            logger.warning(f"Document {document.pk} has no chunks to index")
             return 0
 
         texts = [c.content for c in chunks]
@@ -40,7 +41,7 @@ class VectorStore(IVectorStore):
         self.index.save()
         self.repository.update_document_status(document, EmbeddingStatus.INDEXED)
 
-        logger.info("Indexed %d chunks for document %d", len(chunks), document.pk)
+        logger.info(f"Indexed {len(chunks)} chunks for document {document.pk}")
         return len(chunks)
 
     def remove_document(self, document: Document) -> int:
@@ -53,7 +54,7 @@ class VectorStore(IVectorStore):
         self.index.save()
         self.repository.update_document_status(document, EmbeddingStatus.PENDING)
 
-        logger.info("Removed %d chunks for document %d", len(chunk_ids), document.pk)
+        logger.info(f"Removed {len(chunk_ids)} chunks for document {document.pk}")
         return len(chunk_ids)
 
     def search(self, query: str, k: int = 10) -> list[SearchResult]:
@@ -61,7 +62,6 @@ class VectorStore(IVectorStore):
         query_vec = np.array(self.embedder.embed(query), dtype=np.float32).reshape(1, -1)
         distances, ids = self.index.search(query_vec, k)
 
-        # FAISS returns -1 for unfilled slots
         valid_mask = ids[0] != -1
         chunk_ids = ids[0][valid_mask].tolist()
         scores = distances[0][valid_mask].tolist()
@@ -77,7 +77,7 @@ class VectorStore(IVectorStore):
             if chunk is not None:
                 results.append(SearchResult(chunk=chunk, score=score))
             else:
-                logger.warning("Chunk %d found in index but missing from DB (drift)", cid)
+                logger.warning(f"Chunk {cid} found in index but missing from DB (drift)")
 
         return results
 
