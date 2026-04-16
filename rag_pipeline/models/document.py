@@ -5,6 +5,8 @@ from .mixins import TimestampMixin
 
 
 class Document(TimestampMixin):
+    chunks: models.QuerySet["DocumentChunk"]
+
     title = models.CharField(max_length=512)
     source = models.CharField(max_length=16, choices=SourceType.choices, default="", blank=True)
     embedding_status = models.CharField(
@@ -14,7 +16,7 @@ class Document(TimestampMixin):
     )
     indexed_at = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
+    class Meta(TimestampMixin.Meta):
         verbose_name = "Processed Document"
         verbose_name_plural = "Processed Documents"
 
@@ -22,10 +24,12 @@ class Document(TimestampMixin):
         return f"{self.__class__.__name__}: {self.title}"
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(id={self.id}, title='{self.title}', source='{self.source}')"
+        return f"{self.__class__.__name__}(id={self.pk}, title='{self.title}', source='{self.source}')"
 
 
 class DocumentChunk(TimestampMixin):
+    document_id: int
+
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
     content = models.TextField(null=False, blank=False)
     resilience_factor = models.CharField(max_length=64, blank=True, db_index=True)
@@ -33,7 +37,7 @@ class DocumentChunk(TimestampMixin):
     token_count = models.PositiveIntegerField(default=0)
     chunk_index = models.PositiveIntegerField(default=0)
 
-    class Meta:
+    class Meta(TimestampMixin.Meta):
         ordering = ["chunk_index"]
         verbose_name = "Document Chunk"
         verbose_name_plural = "Document Chunks"
@@ -43,5 +47,5 @@ class DocumentChunk(TimestampMixin):
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})"
+            f"{self.__class__.__name__}(id={self.pk}, document_id={self.document_id}, chunk_index={self.chunk_index})"
         )

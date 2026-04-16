@@ -1,6 +1,6 @@
 import logging
 
-from rag_pipeline.rag_service import RAGService
+from rag_pipeline.protocols import IRAGService
 
 from .constants import FACTORS
 
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class RecommendationService:
-    def __init__(self, rag_service: RAGService) -> None:
+    def __init__(self, rag_service: IRAGService) -> None:
         self.rag_service = rag_service
 
     def get_recommendations(self, scores: dict) -> str:

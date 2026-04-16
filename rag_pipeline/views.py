@@ -24,14 +24,16 @@ def query(request, rag_service: RAGService = Provide[RAGContainer.rag_service]):
 
     response = rag_service.answer(user_query, top_k=top_k)
 
-    return JsonResponse({
-        "answer": response.answer,
-        "sources": [
-            {
-                "chunk_id": s.chunk_id,
-                "document_title": s.document_title,
-                "score": s.score,
-            }
-            for s in response.sources
-        ],
-    })
+    return JsonResponse(
+        {
+            "answer": response.answer,
+            "sources": [
+                {
+                    "chunk_id": s.chunk_id,
+                    "document_title": s.document_title,
+                    "score": s.score,
+                }
+                for s in response.sources
+            ],
+        }
+    )

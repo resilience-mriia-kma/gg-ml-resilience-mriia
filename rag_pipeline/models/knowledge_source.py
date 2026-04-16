@@ -1,6 +1,8 @@
 from django.db import models
 
-from resilience_app.constants import FACTORS  # noqa: F401 — imported for reference; factor keys: family_support, optimism, goal_directedness, social_connections, health
+from resilience_app.constants import (
+    FACTORS,  # noqa: F401 — imported for reference; factor keys: family_support, optimism, goal_directedness, social_connections, health
+)
 
 from .constants import SourceType
 from .document import Document

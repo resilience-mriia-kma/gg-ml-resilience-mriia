@@ -1,3 +1,4 @@
+from rag_pipeline.llm.protocols import IPromptBuilder
 from rag_pipeline.retrieval.dtos import RetrievalResult
 
 SYSTEM_PROMPT = (
@@ -12,7 +13,7 @@ SYSTEM_PROMPT = (
 )
 
 
-class PromptBuilder:
+class PromptBuilder(IPromptBuilder):
     def build_system_prompt(self) -> str:
         return SYSTEM_PROMPT
 

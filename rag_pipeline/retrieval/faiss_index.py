@@ -8,7 +8,7 @@ import faiss
 import numpy as np
 from numpy.typing import NDArray
 
-from .protocol import IVectorIndex
+from .protocols import IVectorIndex
 
 logger = logging.getLogger(__name__)
 

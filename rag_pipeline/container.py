@@ -1,5 +1,5 @@
-from django.conf import settings
 from dependency_injector import containers, providers
+from django.conf import settings
 
 from rag_pipeline.constants import DIMENSIONALITY
 from rag_pipeline.embedding.openai_embedding_service import OpenAIEmbeddingService
@@ -8,10 +8,10 @@ from rag_pipeline.llm.prompt_builder import PromptBuilder
 from rag_pipeline.rag_service import RAGService
 from rag_pipeline.retrieval.retrieval_service import RetrievalService
 
-
 # Factory functions use lazy imports so that container.py is importable without
 # faiss/numpy being installed (those packages are only available on the server).
 # The imports run the first time a provider is actually resolved.
+
 
 def _make_faiss_index(dimension, index_path):
     from rag_pipeline.retrieval.faiss_index import FAISSIndex
@@ -55,7 +55,6 @@ class RAGContainer(containers.DeclarativeContainer):
 
     retrieval_service = providers.Singleton(
         RetrievalService,
-        embedding_service=embedding_service,
         vector_store=vector_store,
     )
 

@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from rag_pipeline.models import Document, DocumentChunk, EmbeddingStatus
 
-from .protocol import IDocumentRepository
+from .protocols import IDocumentRepository
 
 
 class DocumentRepository(IDocumentRepository):

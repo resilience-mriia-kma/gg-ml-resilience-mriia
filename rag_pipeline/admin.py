@@ -46,6 +46,26 @@ class KnowledgeSourceAdmin(admin.ModelAdmin):
 class DocumentAdmin(admin.ModelAdmin):
     list_display = ("title", "source", "embedding_status", "indexed_at")
     readonly_fields = ("embedding_status", "indexed_at", "created_at", "updated_at")
+    actions = ["embed_selected"]
+
+    @admin.action(description="Embed selected documents (re-index into FAISS)")
+    def embed_selected(self, request, queryset):
+        vector_store = apps.get_app_config("rag_pipeline").container.vector_store()
+        succeeded = []
+        failed = []
+
+        for doc in queryset:
+            try:
+                count = vector_store.reindex_document(doc)
+                succeeded.append(f"{doc.title} ({count} chunks)")
+            except Exception as exc:
+                logger.exception("Failed to embed Document id=%s title=%r", doc.pk, doc.title)
+                failed.append(f"{doc.title!r}: {exc}")
+
+        if succeeded:
+            self.message_user(request, f"Embedded: {', '.join(succeeded)}")
+        if failed:
+            self.message_user(request, f"Failed: {'; '.join(failed)}", level="error")
 
 
 @admin.register(DocumentChunk)

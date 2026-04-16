@@ -4,7 +4,8 @@ import os
 from django.apps import apps
 from django.db import transaction
 
-from rag_pipeline.data_ingestion.raw_source_import.file_importer import import_file
+from rag_pipeline.data_ingestion.raw_source_import.chunk_splitter import ChunkSplitter
+from rag_pipeline.data_ingestion.raw_source_import.file_importer import FileImporter
 from rag_pipeline.models import Document, DocumentChunk, EmbeddingStatus, KnowledgeSource, SourceType
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,10 @@ def run_pipeline(knowledge_source: KnowledgeSource) -> Document:
       3. Embed chunks and add to FAISS index
       4. Link KnowledgeSource to the Document
     """
-    raw_chunks = import_file(knowledge_source.file.path, resilience_factor=knowledge_source.resilience_factor)
+    file_importer = FileImporter(ChunkSplitter())
+    raw_chunks = file_importer.import_file(
+        knowledge_source.file.path, resilience_factor=knowledge_source.resilience_factor
+    )
     if not raw_chunks:
         raise ValueError("No chunks extracted from file")
 
@@ -30,18 +34,16 @@ def run_pipeline(knowledge_source: KnowledgeSource) -> Document:
             source=SourceType.FILE,
             embedding_status=EmbeddingStatus.PENDING,
         )
-        DocumentChunk.objects.bulk_create(
-            [
-                DocumentChunk(
-                    document=document,
-                    content=chunk["content"],
-                    resilience_factor=chunk["resilience_factor"],
-                    token_count=chunk["token_count"],
-                    chunk_index=chunk["chunk_index"],
-                )
-                for chunk in raw_chunks
-            ]
-        )
+        DocumentChunk.objects.bulk_create([
+            DocumentChunk(
+                document=document,
+                content=chunk.content,
+                resilience_factor=chunk.resilience_factor,
+                token_count=chunk.token_count,
+                chunk_index=chunk.chunk_index,
+            )
+            for chunk in raw_chunks
+        ])
 
     logger.info(
         "Created document %d ('%s') with %d chunks",
