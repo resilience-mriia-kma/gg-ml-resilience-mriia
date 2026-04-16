@@ -1,7 +1,12 @@
-from typing import Protocol
+from __future__ import annotations
 
-from rag_pipeline.retrieval.dtos import RetrievalResult
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from rag_pipeline.retrieval.dtos import RetrievalResult
 
 
-class IVectorStore(Protocol):
-    def search(self, query_embedding: list[float], *, top_k: int = 5) -> list[RetrievalResult]: ...
+class IRetrievalService(Protocol):
+    """Contract for the retrieval service (query -> ranked results)."""
+
+    def retrieve(self, query: str, *, top_k: int = 5) -> list[RetrievalResult]: ...

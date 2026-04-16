@@ -1,8 +1,6 @@
 from django.db import models
 
-from resilience_app.constants import FACTORS  # noqa: F401 — imported for reference; factor keys: family_support, optimism, goal_directedness, social_connections, health
-
-from .constants import SourceType
+from .constants import ResilienceFactor, SourceType
 from .document import Document
 from .mixins import TimestampMixin
 
@@ -21,7 +19,7 @@ class KnowledgeSource(TimestampMixin):
         max_length=64,
         blank=True,
         db_index=True,
-        help_text="Resilience factor this source relates to (e.g. family_support)",
+        choices=ResilienceFactor.choices,
     )
     category = models.CharField(
         max_length=64,

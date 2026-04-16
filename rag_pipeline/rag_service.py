@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from rag_pipeline.llm.prompt_builder import PromptBuilder
-from rag_pipeline.llm.protocols import ILLMService
+from rag_pipeline.llm.protocols import ILLMService, IPromptBuilder
+from rag_pipeline.protocols import IRAGService
 from rag_pipeline.retrieval.dtos import RetrievalResult
-from rag_pipeline.retrieval.retrieval_service import RetrievalService
+from rag_pipeline.retrieval.protocols import IRetrievalService
 
 
 @dataclass(frozen=True)
@@ -12,12 +12,12 @@ class RAGResponse:
     sources: list[RetrievalResult]
 
 
-class RAGService:
+class RAGService(IRAGService):
     def __init__(
         self,
-        retrieval_service: RetrievalService,
+        retrieval_service: IRetrievalService,
         llm_service: ILLMService,
-        prompt_builder: PromptBuilder,
+        prompt_builder: IPromptBuilder,
     ) -> None:
         self.retrieval_service = retrieval_service
         self.llm_service = llm_service

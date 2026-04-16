@@ -13,3 +13,11 @@ class EmbeddingStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     INDEXED = "indexed", "Indexed"
     STALE = "stale", "Stale"
+
+
+class ResilienceFactor(models.TextChoices):
+    FAMILY_SUPPORT = "family_support", "Family Support"
+    OPTIMISM = "optimism", "Optimism"
+    GOAL_DIRECTEDNESS = "goal_directedness", "Goal-Directedness / Coping"
+    SOCIAL_CONNECTIONS = "social_connections", "Social Connections"
+    HEALTH = "health", "Health"
