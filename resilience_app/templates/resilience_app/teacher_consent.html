@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Поінформована згода</title>
+</head>
+<body>
+    <h1>ПОІНФОРМОВАНА ЗГОДА</h1>
+
+    <p>
+        Я підтверджую, що прочитав(ла) та зрозумів(ла) інформацію про дослідження,
+        мав(ла) можливість поставити запитання, розумію, що участь є добровільною,
+        та погоджуюсь взяти участь у дослідженні.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div>
+            {{ form.full_name.label_tag }}
+            {{ form.full_name }}
+            {% if form.full_name.errors %}
+                <div>{{ form.full_name.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 12px;">
+            {{ form.consent_given }}
+            {{ form.consent_given.label_tag }}
+            {% if form.consent_given.errors %}
+                <div>{{ form.consent_given.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 16px;">
+            <button type="submit">Підтвердити згоду</button>
+        </div>
+    </form>
+</body>
+</html>

@@ -1,11 +1,12 @@
 from dependency_injector.wiring import Provide, inject
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views import View
 
 from .constants import FACTORS
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm
+from .forms import TeacherConsentForm
 from .models import AnalysisRequest
 from .protocols import IRecommendationService
 
@@ -30,9 +31,14 @@ class AnalysisFormView(View):
         self.recommendation_service = recommendation_service
 
     def get(self, request):
+        if not request.session.get("teacher_consent_given"):
+            return redirect("teacher_info_sheet")
         return self._render(request, AnalysisRequestForm())
 
     def post(self, request):
+        if not request.session.get("teacher_consent_given"):
+            return redirect("teacher_info_sheet")
+
         form = AnalysisRequestForm(request.POST)
         if not form.is_valid():
             return self._render(request, form)
@@ -74,3 +80,27 @@ class AnalysisFormView(View):
                 }
             )
         return groups
+    
+
+class TeacherInfoSheetView(View):
+    template_name = "resilience_app/teacher_info_sheet.html"
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+
+class TeacherConsentView(View):
+    template_name = "resilience_app/teacher_consent.html"
+
+    def get(self, request):
+        form = TeacherConsentForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = TeacherConsentForm(request.POST)
+        if form.is_valid():
+            request.session["teacher_consent_given"] = True
+            request.session["teacher_full_name"] = form.cleaned_data["full_name"]
+            return redirect("analysis_form")
+
+        return render(request, self.template_name, {"form": form})
