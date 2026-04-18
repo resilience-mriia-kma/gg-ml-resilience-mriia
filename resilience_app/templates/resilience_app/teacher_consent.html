@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поінформована згода</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; line-height: 1.55; }
+        h1 { font-size: 1.6rem; margin-bottom: 16px; }
+        p { margin: 10px 0; }
+        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .field label { font-weight: 600; font-size: 0.95rem; }
+        .field input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+        .checkbox-field { margin: 18px 0; }
+        .error { color: #dc2626; font-size: 0.85rem; margin-top: 4px; }
+        button { margin-top: 16px; padding: 10px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 18px 0; }
+    </style>
+</head>
+<body>
+    <h1>ПОІНФОРМОВАНА ЗГОДА</h1>
+
+    <div class="note">
+        <p>прочитав(ла) та зрозумів(ла) інформацію про дослідження;</p>
+        <p>мав(ла) можливість поставити запитання;</p>
+        <p>розумію, що участь є добровільною;</p>
+        <p>погоджуюсь взяти участь у дослідженні.</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="field">
+            {{ form.teacher_id.label_tag }}
+            {{ form.teacher_id }}
+            {% for error in form.teacher_id.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="field">
+            {{ form.teacher_id.label_tag }}
+            {{ form.teacher_id }}
+            {% if form.teacher_id.help_text %}
+            <small>{{ form.teacher_id.help_text }}</small>
+            {% endif %}
+            {% for error in form.teacher_id.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="checkbox-field">
+            {{ form.consent_given }}
+            {{ form.consent_given.label_tag }}
+            {% for error in form.consent_given.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <button type="submit">Підтвердити згоду</button>
+    </form>
+</body>
+</html>
