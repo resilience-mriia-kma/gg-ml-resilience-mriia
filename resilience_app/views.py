@@ -15,6 +15,28 @@ def index(request):
     return JsonResponse({"status": "ok", "message": "ml-resilience-mriia"})
 
 
+def _calculate_factor_level(scores_dict):
+    numeric_scores = [int(value) for value in scores_dict.values() if value in {"0", "1", "2"}]
+
+    if not numeric_scores:
+        return AnalysisRequest.ResilienceLevel.MEDIUM
+
+    average_score = sum(numeric_scores) / len(numeric_scores)
+
+    if average_score < 0.75:
+        return AnalysisRequest.ResilienceLevel.LOW
+    if average_score < 1.5:
+        return AnalysisRequest.ResilienceLevel.MEDIUM
+    return AnalysisRequest.ResilienceLevel.HIGH
+
+
+def _build_profile(scores):
+    profile = {}
+    for factor_key, factor_scores in scores.items():
+        profile[factor_key] = _calculate_factor_level(factor_scores)
+    return profile
+
+
 def _get_active_teacher(request):
     teacher_profile_id = request.session.get("teacher_profile_id")
     if not teacher_profile_id:
@@ -66,6 +88,7 @@ class AnalysisFormView(View):
             return self._render(request, teacher_profile, form)
 
         scores = {key: form.get_scores(key) for key in FACTORS}
+        profile = _build_profile(scores)
         recommendations = self.recommendation_service.get_recommendations(scores)
 
         AnalysisRequest.objects.create(
@@ -75,6 +98,7 @@ class AnalysisFormView(View):
             student_age=form.cleaned_data["student_age"],
             student_gender=form.cleaned_data["student_gender"],
             scores=scores,
+            profile=profile,
             recommendations=recommendations,
         )
 
@@ -157,16 +181,24 @@ class TeacherConsentView(View):
         if not form.is_valid():
             return render(request, self.template_name, {"form": form})
 
-        teacher_profile, _ = TeacherProfile.objects.get_or_create(
-            teacher_id=form.cleaned_data["teacher_id"],
-            defaults={"full_name": form.cleaned_data["full_name"]},
-        )
+        teacher_id = form.cleaned_data["teacher_id"]
+        full_name = form.cleaned_data["full_name"]
 
-        teacher_profile.full_name = form.cleaned_data["full_name"]
-        teacher_profile.consent_given = True
-        if not teacher_profile.consent_given_at:
-            teacher_profile.consent_given_at = timezone.now()
-        teacher_profile.save()
+        teacher_profile = TeacherProfile.objects.filter(teacher_id=teacher_id).first()
+
+        if teacher_profile and teacher_profile.consent_given:
+            teacher_profile.full_name = full_name
+            teacher_profile.save(update_fields=["full_name", "updated_at"])
+        else:
+            teacher_profile, _ = TeacherProfile.objects.get_or_create(
+                teacher_id=teacher_id,
+                defaults={"full_name": full_name},
+            )
+            teacher_profile.full_name = full_name
+            teacher_profile.consent_given = True
+            if not teacher_profile.consent_given_at:
+                teacher_profile.consent_given_at = timezone.now()
+            teacher_profile.save()
 
         request.session["teacher_profile_id"] = teacher_profile.id
         request.session["teacher_id"] = teacher_profile.teacher_id

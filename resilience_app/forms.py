@@ -45,6 +45,7 @@ class TeacherConsentForm(forms.Form):
         label="ID педагога",
         max_length=128,
         required=True,
+        help_text="Використайте той самий ID, якщо Ви вже раніше заповнювали форму.",
     )
     full_name = forms.CharField(
         label="Я, ___________________________________ (ПІБ),",

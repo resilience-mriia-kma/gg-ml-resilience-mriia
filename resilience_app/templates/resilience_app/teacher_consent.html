@@ -40,9 +40,12 @@
         </div>
 
         <div class="field">
-            {{ form.full_name.label_tag }}
-            {{ form.full_name }}
-            {% for error in form.full_name.errors %}
+            {{ form.teacher_id.label_tag }}
+            {{ form.teacher_id }}
+            {% if form.teacher_id.help_text %}
+            <small>{{ form.teacher_id.help_text }}</small>
+            {% endif %}
+            {% for error in form.teacher_id.errors %}
             <div class="error">{{ error }}</div>
             {% endfor %}
         </div>
