@@ -4,7 +4,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views import View
 
-from .constants import FACTORS, FEEDBACK_PLACEHOLDER_QUESTIONS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS
+from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherProfile
@@ -122,7 +122,6 @@ class AnalysisFormView(View):
                         "field": form[field_name],
                     }
                 )
-
             groups.append(
                 {
                     "label": factor["label"],
@@ -248,21 +247,20 @@ class TeacherFeedbackFormView(View):
         teacher_profile.save(update_fields=["feedback_status", "updated_at"])
 
         request.session["feedback_message"] = (
-            "Форму оцінки застосунку успішно збережено. Ви можете продовжувати заповнювати основний опитувальник."
+            "Форму оцінки використання ШІ-агента успішно збережено. Ви можете продовжувати заповнювати основний опитувальник."
         )
         return redirect("analysis_form")
 
     def _group_feedback_fields(self, form):
         groups = []
-        for section_key, section in FEEDBACK_PLACEHOLDER_QUESTIONS.items():
+        for section_key, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
             fields = []
-            for item in section["items"]:
-                field_name = f"{section_key}_{item['id']}"
+            for field_def in section["fields"]:
                 fields.append(
                     {
-                        "id": item["id"],
-                        "text": item["text"],
-                        "field": form[field_name],
+                        "name": field_def["name"],
+                        "text": field_def["label"],
+                        "field": form[field_def["name"]],
                     }
                 )
             groups.append({"label": section["label"], "fields": fields})
@@ -270,7 +268,7 @@ class TeacherFeedbackFormView(View):
 
     def _build_initial(self, feedback):
         initial = {"comments": feedback.comments}
-        for section_key, section_data in feedback.responses.items():
-            for item_id, value in section_data.items():
-                initial[f"{section_key}_{item_id}"] = value
+        for _, section_data in feedback.responses.items():
+            for field_name, value in section_data.items():
+                initial[field_name] = value
         return initial

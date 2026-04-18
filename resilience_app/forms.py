@@ -2,10 +2,9 @@ from django import forms
 
 from .constants import (
     FACTORS,
-    FEEDBACK_PLACEHOLDER_QUESTIONS,
-    FEEDBACK_QUESTION_CHOICES,
     GENDER_CHOICES,
     SCORE_CHOICES,
+    TEACHER_APP_FEEDBACK_SECTIONS,
 )
 
 
@@ -60,7 +59,7 @@ class TeacherConsentForm(forms.Form):
 
 class TeacherAppFeedbackForm(forms.Form):
     comments = forms.CharField(
-        label="Ваші коментарі",
+        label="Загальні коментарі",
         widget=forms.Textarea(attrs={"rows": 4}),
         required=False,
     )
@@ -68,20 +67,50 @@ class TeacherAppFeedbackForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        for section_key, section in FEEDBACK_PLACEHOLDER_QUESTIONS.items():
-            for item in section["items"]:
-                field_name = f"{section_key}_{item['id']}"
-                self.fields[field_name] = forms.ChoiceField(
-                    choices=[("", "---------")] + FEEDBACK_QUESTION_CHOICES,
-                    required=False,
-                    label=item["text"],
-                )
+        for section_key, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
+            for field_def in section["fields"]:
+                name = field_def["name"]
+                field_type = field_def["type"]
+                label = field_def["label"]
+
+                if field_type == "choice":
+                    self.fields[name] = forms.ChoiceField(
+                        label=label,
+                        choices=field_def["choices"],
+                        required=False,
+                    )
+                elif field_type == "multiple_choice":
+                    self.fields[name] = forms.MultipleChoiceField(
+                        label=label,
+                        choices=field_def["choices"],
+                        required=False,
+                        widget=forms.CheckboxSelectMultiple,
+                    )
+                elif field_type == "text":
+                    self.fields[name] = forms.CharField(
+                        label=label,
+                        required=False,
+                    )
+                elif field_type == "integer":
+                    self.fields[name] = forms.IntegerField(
+                        label=label,
+                        required=False,
+                        min_value=1,
+                        max_value=120,
+                    )
+                elif field_type == "textarea":
+                    self.fields[name] = forms.CharField(
+                        label=label,
+                        required=False,
+                        widget=forms.Textarea(attrs={"rows": 4}),
+                    )
 
     def get_feedback_responses(self):
-        return {
-            section_key: {
-                item["id"]: self.cleaned_data.get(f"{section_key}_{item['id']}", "")
-                for item in section["items"]
-            }
-            for section_key, section in FEEDBACK_PLACEHOLDER_QUESTIONS.items()
-        }
+        responses = {}
+        for section_key, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
+            section_responses = {}
+            for field_def in section["fields"]:
+                name = field_def["name"]
+                section_responses[name] = self.cleaned_data.get(name)
+            responses[section_key] = section_responses
+        return responses

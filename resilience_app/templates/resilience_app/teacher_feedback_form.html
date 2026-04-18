@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Форма оцінки застосунку</title>
+    <title>Оцінка використання ШІ-агента “Помічник педагога”</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; }
         h1 { font-size: 1.6rem; margin-bottom: 16px; }
@@ -12,10 +12,12 @@
         .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
         .field label { font-weight: 600; font-size: 0.95rem; }
         .field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+        .checkbox-list { margin-top: 6px; }
+        .checkbox-list ul { list-style: none; padding-left: 0; margin: 0; }
+        .checkbox-list li { margin-bottom: 6px; }
         .error { color: #dc2626; font-size: 0.85rem; }
         .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 16px 0; }
         .question-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
-        .question-number { font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; }
         .top-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
         .button-link { text-decoration: none; }
         .secondary-button { background: white; color: #2563eb; border: 1px solid #2563eb; }
@@ -25,15 +27,15 @@
     </style>
 </head>
 <body>
-    <h1>Форма оцінки застосунку</h1>
+    <h1>Оцінка використання ШІ-агента “Помічник педагога”</h1>
 
     <p><strong>Педагог:</strong> {{ teacher_profile.full_name }}</p>
     <p><strong>ID педагога:</strong> {{ teacher_profile.teacher_id }}</p>
 
     <div class="note">
         <p>
-            Це коротка форма оцінки застосунку. Вона не блокує подальше заповнення
-            основного опитувальника. Після надсилання Ви зможете повернутися до screener-а.
+            Ця форма подається після завершення запланованої серії оцінювань.
+            Після надсилання Ви зможете й далі користуватися основним опитувальником.
         </p>
     </div>
 
@@ -51,10 +53,17 @@
 
         {% for item in group.fields %}
         <div class="question-card">
-            <div class="question-number">{{ item.id }}</div>
             <div class="field">
                 <label for="{{ item.field.id_for_label }}">{{ item.text }}</label>
+
+                {% if item.field.field.widget.__class__.__name__ == "CheckboxSelectMultiple" %}
+                <div class="checkbox-list">
+                    {{ item.field }}
+                </div>
+                {% else %}
                 {{ item.field }}
+                {% endif %}
+
                 {% for error in item.field.errors %}
                 <div class="error">{{ error }}</div>
                 {% endfor %}
@@ -63,7 +72,7 @@
         {% endfor %}
         {% endfor %}
 
-        <h2>Коментарі</h2>
+        <h2>Додаткові коментарі</h2>
         <div class="field">
             <label for="{{ form.comments.id_for_label }}">{{ form.comments.label }}</label>
             {{ form.comments }}

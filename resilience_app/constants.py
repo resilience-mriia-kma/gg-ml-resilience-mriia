@@ -13,6 +13,41 @@ GENDER_CHOICES = [
     ("female", "жіноча"),
 ]
 
+YES_PARTIAL_NO_CHOICES = [
+    ("yes", "Так"),
+    ("partial", "Частково"),
+    ("no", "Ні"),
+]
+
+EXPERIENCE_CHOICES = [
+    ("up_to_3", "До 3 років"),
+    ("3_10", "3–10 років"),
+    ("10_20", "10–20 років"),
+    ("over_20", "Більше 20 років"),
+]
+
+SCHOOL_LEVEL_CHOICES = [
+    ("primary", "Початкова школа"),
+    ("middle", "Середня школа"),
+    ("high", "Старша школа"),
+]
+
+RANGE_STUDENTS_CHOICES = [
+    ("1_3", "1–3"),
+    ("4_7", "4–7"),
+    ("8_12", "8–12"),
+    ("over_12", "Більше 12"),
+]
+
+LIKERT_5_CHOICES = [
+    ("", "---------"),
+    ("1", "1"),
+    ("2", "2"),
+    ("3", "3"),
+    ("4", "4"),
+    ("5", "5"),
+]
+
 ID_FIELDS = ["teacher_id", "student_id", "student_age", "student_gender"]
 
 FEEDBACK_TRIGGER_COUNT = 10
@@ -155,43 +190,289 @@ FACTORS = OrderedDict(
     }
 )
 
-FEEDBACK_QUESTION_CHOICES = [(str(i), str(i)) for i in range(1, 6)]
-
-FEEDBACK_PLACEHOLDER_QUESTIONS = OrderedDict(
+TEACHER_APP_FEEDBACK_SECTIONS = OrderedDict(
     {
-        "general_experience": {
-            "label": "Загальне враження",
-            "items": [
+        "general_information": {
+            "label": "Блок 1. Загальна інформація",
+            "fields": [
                 {
-                    "id": "general_1",
-                    "text": "Наскільки зручно було користуватися інструментом?",
+                    "name": "teaching_experience",
+                    "type": "choice",
+                    "label": "Ваш стаж педагогічної діяльності",
+                    "choices": EXPERIENCE_CHOICES,
                 },
                 {
-                    "id": "general_2",
-                    "text": "Наскільки корисним був інструмент у Вашій роботі?",
+                    "name": "school_levels",
+                    "type": "multiple_choice",
+                    "label": "Клас(и), з якими Ви працюєте",
+                    "choices": SCHOOL_LEVEL_CHOICES,
+                },
+                {
+                    "name": "subject",
+                    "type": "text",
+                    "label": "Предмет",
+                },
+                {
+                    "name": "teacher_gender",
+                    "type": "choice",
+                    "label": "Стать",
+                    "choices": GENDER_CHOICES,
+                },
+                {
+                    "name": "teacher_age",
+                    "type": "integer",
+                    "label": "Вік",
                 },
             ],
         },
-        "ai_feedback": {
-            "label": "Оцінка рекомендацій системи",
-            "items": [
+        "tool_experience": {
+            "label": "Блок 2. Досвід використання інструменту",
+            "fields": [
                 {
-                    "id": "ai_1",
-                    "text": "Наскільки зрозумілими були рекомендації системи?",
+                    "name": "completed_student_assessment",
+                    "type": "choice",
+                    "label": "Чи змогли Ви завершити оцінювання учнів за допомогою інструменту?",
+                    "choices": YES_PARTIAL_NO_CHOICES,
                 },
                 {
-                    "id": "ai_2",
-                    "text": "Наскільки релевантними були рекомендації до ситуацій учнів?",
+                    "name": "students_evaluated_range",
+                    "type": "choice",
+                    "label": "Скільки учнів Ви оцінили?",
+                    "choices": RANGE_STUDENTS_CHOICES,
+                },
+                {
+                    "name": "ease_of_use",
+                    "type": "choice",
+                    "label": "Наскільки легко було використовувати інструмент? (1 — дуже складно, 5 — дуже легко)",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "tool_experience_comments",
+                    "type": "textarea",
+                    "label": "Ваші коментарі щодо досвіду користування",
                 },
             ],
         },
-        "future_use": {
-            "label": "Подальше використання",
-            "items": [
+        "acceptability": {
+            "label": "Блок 3. Прийнятність (Acceptability)",
+            "fields": [
                 {
-                    "id": "future_1",
-                    "text": "Чи хотіли б Ви користуватися інструментом надалі?",
-                }
+                    "name": "tool_is_useful",
+                    "type": "choice",
+                    "label": "Інструмент є корисним у моїй роботі",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "comfortable_to_use",
+                    "type": "choice",
+                    "label": "Мені було комфортно використовувати цей інструмент",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "would_recommend_tool",
+                    "type": "choice",
+                    "label": "Я б рекомендував(ла) цей інструмент іншим вчителям",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "acceptability_comments",
+                    "type": "textarea",
+                    "label": "Ваші коментарі",
+                },
+            ],
+        },
+        "appropriateness": {
+            "label": "Блок 4. Відповідність (Appropriateness)",
+            "fields": [
+                {
+                    "name": "fits_student_needs",
+                    "type": "choice",
+                    "label": "Інструмент відповідає потребам моїх учнів",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "fits_school_context",
+                    "type": "choice",
+                    "label": "Інструмент відповідає умовам моєї школи",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "questions_reflect_real_classroom",
+                    "type": "choice",
+                    "label": "Питання інструменту відображають реальні ситуації в класі",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "appropriateness_comments",
+                    "type": "textarea",
+                    "label": "Ваші коментарі",
+                },
+            ],
+        },
+        "feasibility": {
+            "label": "Блок 5. Здійсненність (Feasibility)",
+            "fields": [
+                {
+                    "name": "can_use_daily",
+                    "type": "choice",
+                    "label": "Я можу використовувати цей інструмент у своїй щоденній роботі",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "not_too_time_consuming",
+                    "type": "choice",
+                    "label": "Заповнення інструменту не займає надто багато часу",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "understand_integration",
+                    "type": "choice",
+                    "label": "Я розумію, як інтегрувати цей інструмент у свою практику",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "feasibility_comments",
+                    "type": "textarea",
+                    "label": "Ваші коментарі",
+                },
+            ],
+        },
+        "usability": {
+            "label": "Блок 6. Зручність використання (Usability)",
+            "fields": [
+                {
+                    "name": "interface_clear",
+                    "type": "choice",
+                    "label": "Інтерфейс системи є зрозумілим",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "instructions_clear",
+                    "type": "choice",
+                    "label": "Інструкції були зрозумілими",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "easy_to_navigate",
+                    "type": "choice",
+                    "label": "Я легко орієнтувався(лась) у системі",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "usability_comments",
+                    "type": "textarea",
+                    "label": "Ваші коментарі",
+                },
+            ],
+        },
+        "llm_evaluation": {
+            "label": "Блок 7. Оцінка ШІ-агента (LLM)",
+            "fields": [
+                {
+                    "name": "recommendations_clear",
+                    "type": "choice",
+                    "label": "Рекомендації системи були зрозумілими",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "recommendations_relevant",
+                    "type": "choice",
+                    "label": "Рекомендації виглядали релевантними до ситуацій учнів",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "recommendations_practical",
+                    "type": "choice",
+                    "label": "Рекомендації були практичними для використання",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "trust_recommendations",
+                    "type": "choice",
+                    "label": "Я довіряю рекомендаціям системи",
+                    "choices": LIKERT_5_CHOICES,
+                },
+            ],
+        },
+        "safety_ethics": {
+            "label": "Блок 8. Безпека та етика",
+            "fields": [
+                {
+                    "name": "no_stigmatization_risk",
+                    "type": "choice",
+                    "label": "Система не створює ризику стигматизації учнів",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "understand_limitations",
+                    "type": "choice",
+                    "label": "Я розумію обмеження системи",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "not_a_diagnosis",
+                    "type": "choice",
+                    "label": "Я не сприймаю рекомендації як “діагноз”",
+                    "choices": LIKERT_5_CHOICES,
+                },
+            ],
+        },
+        "intention_to_use": {
+            "label": "Блок 9. Намір використання",
+            "fields": [
+                {
+                    "name": "would_use_future",
+                    "type": "choice",
+                    "label": "Я б використовував(ла) цей інструмент у майбутньому",
+                    "choices": LIKERT_5_CHOICES,
+                },
+                {
+                    "name": "would_use_regularly",
+                    "type": "choice",
+                    "label": "Я б використовував(ла) цей інструмент регулярно",
+                    "choices": LIKERT_5_CHOICES,
+                },
+            ],
+        },
+        "open_questions": {
+            "label": "Блок 10. Відкриті питання",
+            "fields": [
+                {
+                    "name": "most_useful_part",
+                    "type": "textarea",
+                    "label": "Що було найбільш корисним у цьому інструменті?",
+                },
+                {
+                    "name": "unclear_or_difficult",
+                    "type": "textarea",
+                    "label": "Що було незрозумілим або складним?",
+                },
+                {
+                    "name": "doubt_or_discomfort",
+                    "type": "textarea",
+                    "label": "Чи були рекомендації, які викликали сумніви або дискомфорт?",
+                },
+                {
+                    "name": "suggested_changes",
+                    "type": "textarea",
+                    "label": "Які зміни Ви б запропонували?",
+                },
+            ],
+        },
+        "student_work_experience": {
+            "label": "Блок 11. Досвід роботи з учнями",
+            "fields": [
+                {
+                    "name": "helped_understand_students",
+                    "type": "choice",
+                    "label": "Чи допоміг інструмент Вам краще зрозуміти учнів?",
+                    "choices": YES_PARTIAL_NO_CHOICES,
+                },
+                {
+                    "name": "changed_work_after_tool",
+                    "type": "textarea",
+                    "label": "Чи змінили Ви щось у своїй роботі після використання інструменту?",
+                },
             ],
         },
     }
