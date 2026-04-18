@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Teacher Feedback</title>
+</head>
+<body>
+    <h1>Teacher Feedback</h1>
+
+    {% if success %}
+        <p><strong>Дякуємо за фідбек.</strong></p>
+    {% else %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.teacher_id }}
+            {{ form.teacher_email }}
+            {{ form.forms_completed }}
+
+            <div style="margin-bottom: 16px;">
+                <p><strong>{{ form.rating.label }}</strong></p>
+                {{ form.rating }}
+                {% for error in form.rating.errors %}
+                    <div style="color: red;">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label>{{ form.comments.label }}</label><br />
+                {{ form.comments }}
+                {% for error in form.comments.errors %}
+                    <div style="color: red;">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Send feedback</button>
+        </form>
+    {% endif %}
+</body>
+</html>
