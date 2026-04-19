@@ -141,3 +141,5 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 
 APP_BASE_URL = env("APP_BASE_URL", default="http://localhost:8000")
 CONSENT_DOCUMENT_PATH = env("CONSENT_DOCUMENT_PATH", default="")
+# Knowledge base sources directory
+RAW_SOURCES_DIR = env("RAW_SOURCES_DIR", default=str(BASE_DIR / "raw_sources"))

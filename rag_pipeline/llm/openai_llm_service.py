@@ -17,4 +17,4 @@ class OpenAILLMService(ILLMService):
                 {"role": "user", "content": user_prompt},
             ],
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or "No answer generated."

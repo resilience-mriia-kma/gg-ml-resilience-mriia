@@ -1,6 +1,7 @@
 import numpy as np
-from django.apps import apps
 from django.core.management.base import BaseCommand
+
+from rag_pipeline.apps import RagPipelineConfig
 
 
 class Command(BaseCommand):
@@ -10,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument("--repair", action="store_true", help="Auto-repair detected drift")
 
     def handle(self, **options):
-        container = apps.get_app_config("rag_pipeline").container
+        container = RagPipelineConfig.get_container()
         index = container.faiss_index()
         repo = container.repository()
 

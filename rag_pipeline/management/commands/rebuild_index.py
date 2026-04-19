@@ -1,6 +1,6 @@
-from django.apps import apps
 from django.core.management.base import BaseCommand
 
+from rag_pipeline.apps import RagPipelineConfig
 from rag_pipeline.models import Document, EmbeddingStatus
 
 
@@ -15,7 +15,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
-        container = apps.get_app_config("rag_pipeline").container
+        container = RagPipelineConfig.get_container()
         store = container.vector_store()
 
         queryset = Document.objects.all()
@@ -31,6 +31,6 @@ class Command(BaseCommand):
         for doc in documents:
             count = store.reindex_document(doc)
             total_chunks += count
-            self.stdout.write(f"  Indexed document {doc.pk} ({count} chunks)")
+            self.stdout.write(f"Indexed document {doc.pk} ({count} chunks)")
 
         self.stdout.write(self.style.SUCCESS(f"Done. Indexed {total_chunks} chunks across {len(documents)} documents."))
