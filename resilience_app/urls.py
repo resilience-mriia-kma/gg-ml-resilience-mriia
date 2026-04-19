@@ -1,12 +1,13 @@
 from django.urls import path
 
 from . import views
-from .views import AnalysisFormView, AnalysisReportView, TeacherFeedbackView
 from .views import (
     AnalysisFormView,
+    AnalysisReportView,
     TeacherConsentView,
     TeacherFeedbackDeclineView,
     TeacherFeedbackFormView,
+    TeacherFeedbackView,
     TeacherInfoSheetView,
 )
 
