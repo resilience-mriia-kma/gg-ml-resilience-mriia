@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Оцінка використання ШІ-агента “Помічник педагога”</title>
+    <title>Оцінка використання ШІ-агента "Помічник педагога"</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; }
         h1 { font-size: 1.6rem; margin-bottom: 16px; }
@@ -16,6 +16,7 @@
         .checkbox-list ul { list-style: none; padding-left: 0; margin: 0; }
         .checkbox-list li { margin-bottom: 6px; }
         .error { color: #dc2626; font-size: 0.85rem; }
+        .success { padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; margin: 24px 0; }
         .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 16px 0; }
         .question-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
         .top-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
@@ -27,11 +28,20 @@
     </style>
 </head>
 <body>
-    <h1>Оцінка використання ШІ-агента “Помічник педагога”</h1>
+    <h1>Оцінка використання ШІ-агента "Помічник педагога"</h1>
 
     <p><strong>Педагог:</strong> {{ teacher_profile.full_name }}</p>
-    <p><strong>ID педагога:</strong> {{ teacher_profile.teacher_id }}</p>
 
+    {% if success %}
+    <div class="success">
+        <p><strong>Вашу оцінку зафіксовано. Дякуємо!</strong></p>
+    </div>
+    <div class="top-actions">
+        <a class="button-link" href="{% url 'analysis_form' %}">
+            <button type="button">Повернутися до опитувальника</button>
+        </a>
+    </div>
+    {% else %}
     <div class="note">
         <p>
             Ця форма подається після завершення запланованої серії оцінювань.
@@ -83,5 +93,6 @@
 
         <button type="submit">Надіслати відгук</button>
     </form>
+    {% endif %}
 </body>
 </html>
