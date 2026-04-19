@@ -2,19 +2,8 @@
 <html lang="uk">
 <head>
     <meta charset="utf-8" />
-    <title>Resilience Screener</title>
-</head>
-<body>
-    <h1>Resilience Screener — Analysis Request</h1>
-
-    {% if success %}
-        <p><strong>Дякуємо. Форму збережено, звіт буде надіслано на email.</strong></p>
-    {% endif %}
-
-    <form method="post">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Опитувальник резильєнтності — версія педагога</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Опитувальник резильєнтності - версія педагога</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; }
         h1 { font-size: 1.6rem; margin-bottom: 16px; }
@@ -70,19 +59,18 @@
     <div class="note">
         <p>
             Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
-            спостережень за останні 2-4 тижні (поведінка дитини, її висловлювання, взаємодія
-            з друзями чи взаємодія батьків зі школою).
+            спостережень за останні 2-4 тижні.
         </p>
         <p><strong>Шкала відповіді</strong></p>
-        <p>0 — низький рівень (проявляється рідко або не спостерігається)</p>
-        <p>1 — середній рівень (проявляється в окремих ситуаціях або з підтримкою)</p>
-        <p>2 — високий рівень (проявляється регулярно і самостійно)</p>
-        <p>NA — недостатньо інформації</p>
+        <p>0 - низький рівень</p>
+        <p>1 - середній рівень</p>
+        <p>2 - високий рівень</p>
+        <p>NA - недостатньо інформації</p>
     </div>
 
     {% if show_feedback_offer %}
     <div class="feedback-offer">
-        <p><strong>Пропозиція пройти форму оцінки використання ШІ-агента “Помічник педагога”</strong></p>
+        <p><strong>Пропозиція пройти форму оцінки використання ШІ-агента "Помічник педагога"</strong></p>
         <p>
             Ви вже завершили {{ completed_screenings_count }} оцінювань.
             Чи хочете зараз пройти форму оцінки використання інструменту?
@@ -106,26 +94,6 @@
 
         <h2>Ідентифікаційні дані</h2>
         {% for field in id_fields %}
-            <div style="margin-bottom: 12px;">
-                <label>{{ field.label }}</label><br />
-                {{ field }}
-                {% for error in field.errors %}
-                    <div style="color: red;">{{ error }}</div>
-                {% endfor %}
-            </div>
-        {% endfor %}
-
-        {% for group in factor_groups %}
-            <h2>{{ group.label }} (items {{ group.items|join:", " }})</h2>
-            {% for field in group.fields %}
-                <div style="margin-bottom: 10px;">
-                    <label>{{ field.label }}</label><br />
-                    {{ field }}
-                    {% for error in field.errors %}
-                        <div style="color: red;">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
         <div class="field">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
@@ -137,7 +105,6 @@
 
         {% for group in factor_groups %}
         <h2>{{ group.label }}</h2>
-
         {% for item in group.fields %}
         <div class="question-card">
             <div class="question-number">№ {{ item.id }}</div>

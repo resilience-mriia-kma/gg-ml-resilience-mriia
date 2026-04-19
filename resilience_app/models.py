@@ -9,6 +9,7 @@ class TeacherProfile(models.Model):
         SUBMITTED = "submitted", "Submitted"
 
     teacher_id = models.CharField(max_length=128, unique=True)
+    teacher_email = models.EmailField(blank=True, null=True)
     full_name = models.CharField(max_length=255)
     consent_given = models.BooleanField(default=False)
     consent_given_at = models.DateTimeField(null=True, blank=True)
@@ -24,7 +25,7 @@ class TeacherProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.teacher_id} — {self.full_name}"
+        return f"{self.teacher_id} - {self.full_name}"
 
 
 class AnalysisRequest(models.Model):
@@ -50,7 +51,6 @@ class AnalysisRequest(models.Model):
     scores = models.JSONField(
         help_text="Dict of factor_key -> list/dict of scores (0/1/2/NA)",
     )
-
     profile = models.JSONField(
         blank=True,
         default=dict,
@@ -66,7 +66,7 @@ class AnalysisRequest(models.Model):
 
     def __str__(self):
         return (
-            f"Request {self.pk} — teacher {self.teacher_id} "
+            f"Request {self.pk} - teacher {self.teacher_id} "
             f"({self.teacher_email}), student {self.student_id}"
         )
 
@@ -128,6 +128,49 @@ class Notification(models.Model):
         return f"{self.type} -> {self.recipient_email} [{self.status}]"
 
 
+class ConsentFormInvitation(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
+    teacher_id = models.CharField(max_length=128, unique=True)
+    teacher_email = models.EmailField()
+    full_name = models.CharField(max_length=255, blank=True)
+
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    invitation_sent = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Consent Form Invitation"
+        verbose_name_plural = "Consent Form Invitations"
+
+    def mark_sent(self):
+        self.status = self.Status.SENT
+        self.sent_at = timezone.now()
+        self.invitation_sent = True
+        self.error_message = ""
+        self.save(update_fields=["status", "sent_at", "invitation_sent", "error_message"])
+
+    def mark_failed(self, error_message: str):
+        self.status = self.Status.FAILED
+        self.error_message = error_message[:5000]
+        self.save(update_fields=["status", "error_message"])
+
+    def __str__(self):
+        return f"{self.teacher_id} ({self.teacher_email}) - {self.get_status_display()}"
+
+
 class TeacherFeedback(models.Model):
     teacher_id = models.CharField(max_length=128)
     teacher_email = models.EmailField()
@@ -144,7 +187,6 @@ class TeacherFeedback(models.Model):
             f"Feedback from {self.teacher_id} "
             f"({self.teacher_email}) after {self.forms_completed} forms"
         )
-        return f"Request {self.pk} — teacher {self.teacher_id}, student {self.student_id}"
 
 
 class TeacherAppFeedback(models.Model):
@@ -161,4 +203,4 @@ class TeacherAppFeedback(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Feedback — {self.teacher_profile.teacher_id}"
+        return f"Feedback - {self.teacher_profile.teacher_id}"

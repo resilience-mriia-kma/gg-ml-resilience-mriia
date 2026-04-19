@@ -8,31 +8,13 @@ from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS, TEACHER_APP_F
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
-from .notifications import (
-    queue_feedback_request_if_needed,
-    queue_report_ready_notification,
-)
+from .notifications import queue_feedback_request_if_needed, queue_report_ready_notification
 from .recommendation_service import RecommendationService
 from .scoring import compute_profile
 
 
 def index(request):
     return JsonResponse({"status": "ok", "message": "ml-resilience-mriia"})
-
-
-def _calculate_factor_level(scores_dict):
-    numeric_scores = [int(value) for value in scores_dict.values() if value in {"0", "1", "2"}]
-
-    if not numeric_scores:
-        return AnalysisRequest.ResilienceLevel.MEDIUM
-
-    average_score = sum(numeric_scores) / len(numeric_scores)
-
-    if average_score < 0.75:
-        return AnalysisRequest.ResilienceLevel.LOW
-    if average_score < 1.5:
-        return AnalysisRequest.ResilienceLevel.MEDIUM
-    return AnalysisRequest.ResilienceLevel.HIGH
 
 
 def _get_active_teacher(request):
@@ -148,12 +130,7 @@ class AnalysisFormView(View):
                         "field": form[field_name],
                     }
                 )
-            groups.append(
-                {
-                    "label": factor["label"],
-                    "fields": fields,
-                }
-            )
+            groups.append({"label": factor["label"], "fields": fields})
         return groups
 
     def _get_initial_data(self, request):
@@ -175,12 +152,16 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
-                "value": analysis_request.profile.get(factor_key, "—"),
+                "value": analysis_request.profile.get(factor_key, "-"),
             }
             for factor_key in FACTORS
         ]
 
-        recommendation_lines = [line.strip() for line in analysis_request.recommendations.splitlines() if line.strip()]
+        recommendation_lines = [
+            line.strip()
+            for line in analysis_request.recommendations.splitlines()
+            if line.strip()
+        ]
 
         return render(
             request,
@@ -229,11 +210,7 @@ class TeacherFeedbackView(View):
             comments=form.cleaned_data["comments"],
         )
 
-        return self._render(
-            request,
-            TeacherFeedbackForm(),
-            success=True,
-        )
+        return self._render(request, TeacherFeedbackForm(), success=True)
 
 
 class TeacherInfoSheetView(View):
@@ -321,6 +298,9 @@ class TeacherFeedbackFormView(View):
             {
                 "form": form,
                 "success": success,
+                "teacher_profile": teacher_profile,
+                "feedback_groups": self._group_feedback_fields(form),
+                "already_submitted": feedback is not None,
             },
         )
 

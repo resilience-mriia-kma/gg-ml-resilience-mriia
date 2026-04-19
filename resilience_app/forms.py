@@ -1,11 +1,6 @@
 from django import forms
 
-from .constants import (
-    FACTORS,
-    GENDER_CHOICES,
-    SCORE_CHOICES,
-    TEACHER_APP_FEEDBACK_SECTIONS,
-)
+from .constants import FACTORS, GENDER_CHOICES, SCORE_CHOICES, TEACHER_APP_FEEDBACK_SECTIONS
 
 
 class AnalysisRequestForm(forms.Form):
@@ -13,10 +8,7 @@ class AnalysisRequestForm(forms.Form):
     teacher_email = forms.EmailField(label="Teacher email")
     student_id = forms.CharField(max_length=128, label="ID учня")
     student_age = forms.IntegerField(min_value=1, max_value=100, label="Вік учня")
-    student_gender = forms.ChoiceField(
-        label="Стать",
-        choices=GENDER_CHOICES,
-    )
+    student_gender = forms.ChoiceField(label="Стать", choices=GENDER_CHOICES)
 
     def __init__(self, *args, **kwargs):
         initial_teacher_id = kwargs.pop("initial_teacher_id", None)
@@ -35,7 +27,10 @@ class AnalysisRequestForm(forms.Form):
                 )
 
     def get_scores(self, factor_key):
-        return [self.cleaned_data.get(f"{factor_key}_{item['id']}", "") for item in FACTORS[factor_key]["items"]]
+        return [
+            self.cleaned_data.get(f"{factor_key}_{item['id']}", "")
+            for item in FACTORS[factor_key]["items"]
+        ]
 
     def get_factor_scores(self, factor_key):
         return {
@@ -79,10 +74,7 @@ class TeacherConsentForm(forms.Form):
         max_length=255,
         required=True,
     )
-    consent_given = forms.BooleanField(
-        label="Так, погоджуюсь",
-        required=True,
-    )
+    consent_given = forms.BooleanField(label="Так, погоджуюсь", required=True)
 
 
 class TeacherAppFeedbackForm(forms.Form):
@@ -115,10 +107,7 @@ class TeacherAppFeedbackForm(forms.Form):
                         widget=forms.CheckboxSelectMultiple,
                     )
                 elif field_type == "text":
-                    self.fields[name] = forms.CharField(
-                        label=label,
-                        required=False,
-                    )
+                    self.fields[name] = forms.CharField(label=label, required=False)
                 elif field_type == "integer":
                     self.fields[name] = forms.IntegerField(
                         label=label,

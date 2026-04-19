@@ -50,23 +50,34 @@ def queue_consent_form_notification(
     *,
     teacher_id: str,
     teacher_email: str,
-    student_id: str,
-    student_age: int,
-    student_gender: str,
+    student_id: str | None = None,
+    student_age: int | None = None,
+    student_gender: str | None = None,
 ) -> Notification:
+    context = {
+        "teacher_id": teacher_id,
+        "teacher_email": teacher_email,
+    }
+
+    if student_id:
+        context["student_id"] = student_id
+    if student_age is not None:
+        context["student_age"] = student_age
+    if student_gender:
+        context["student_gender"] = student_gender
+
+    if student_id:
+        dedupe_key = f"consent_form:{teacher_email}:{student_id}"
+    else:
+        dedupe_key = f"consent_form:{teacher_email}"
+
     return enqueue_notification(
         notification_type=Notification.NotificationType.CONSENT_FORM,
         recipient_email=teacher_email,
         subject="Згода та форма оцінювання резильєнтності",
-        context={
-            "teacher_id": teacher_id,
-            "teacher_email": teacher_email,
-            "student_id": student_id,
-            "student_age": student_age,
-            "student_gender": student_gender,
-        },
+        context=context,
         attachment_path=settings.CONSENT_DOCUMENT_PATH,
-        dedupe_key=f"consent_form:{teacher_email}:{student_id}",
+        dedupe_key=dedupe_key,
     )
 
 
@@ -103,9 +114,7 @@ def queue_feedback_request_if_needed(
             "forms_completed": completed_forms,
         },
         analysis_request=analysis_request,
-        dedupe_key=(
-            f"feedback_request:{analysis_request.teacher_email}:{completed_forms}"
-        ),
+        dedupe_key=f"feedback_request:{analysis_request.teacher_email}:{completed_forms}",
     )
 
 
@@ -132,16 +141,18 @@ class NotificationService:
 
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
-        form_url = self._absolute_url(
-            reverse("analysis_form"),
-            query_params={
-                "teacher_id": context["teacher_id"],
-                "teacher_email": context["teacher_email"],
-                "student_id": context["student_id"],
-                "student_age": context["student_age"],
-                "student_gender": context["student_gender"],
-            },
-        )
+        query_params = {
+            "teacher_id": context["teacher_id"],
+            "teacher_email": context["teacher_email"],
+        }
+        if "student_id" in context:
+            query_params["student_id"] = context["student_id"]
+        if "student_age" in context:
+            query_params["student_age"] = context["student_age"]
+        if "student_gender" in context:
+            query_params["student_gender"] = context["student_gender"]
+
+        form_url = self._absolute_url(reverse("analysis_form"), query_params=query_params)
 
         body = (
             "Вітаємо!\n\n"
@@ -163,9 +174,7 @@ class NotificationService:
         if analysis_request is None:
             raise ValueError("Report notification requires analysis_request")
 
-        report_url = self._absolute_url(
-            reverse("analysis_report", kwargs={"pk": analysis_request.pk}),
-        )
+        report_url = self._absolute_url(reverse("analysis_report", kwargs={"pk": analysis_request.pk}))
         feedback_url = self._absolute_url(
             reverse("feedback_form"),
             query_params={
@@ -180,7 +189,7 @@ class NotificationService:
         summary_lines = []
         for factor_key, factor in FACTORS.items():
             summary_lines.append(
-                f"- {factor['label']}: {analysis_request.profile.get(factor_key, '—')}"
+                f"- {factor['label']}: {analysis_request.profile.get(factor_key, '-')}"
             )
 
         recommendation_lines = self._extract_recommendation_lines(
