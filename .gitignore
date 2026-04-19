@@ -136,6 +136,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
 .envrc
 .venv
 env/
@@ -205,3 +206,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# RAG pipeline — binary artifacts not tracked in VCS
+raw_sources/*
+!raw_sources/.gitkeep
+!raw_sources/README.md
+
+faiss_store/*
+!faiss_store/.gitkeep
+
+
+# idea
+.idea/

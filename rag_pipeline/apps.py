@@ -1,4 +1,4 @@
-from django.apps import AppConfig
+from django.apps import AppConfig, apps
 
 from rag_pipeline.container import RAGContainer
 
@@ -8,8 +8,9 @@ class RagPipelineConfig(AppConfig):
     container = RAGContainer()
 
     def ready(self):
-        # Wire both views and admin so that @inject decorators resolve correctly.
-        # faiss_index / vector_store are constructed lazily on first use — no
-        # eager load_or_create() here so that manage.py check works without
-        # faiss/numpy being installed in the local dev environment.
         self.container.wire(modules=[".views", ".admin"])
+
+    @staticmethod
+    def get_container() -> RAGContainer:
+        config: RagPipelineConfig = apps.get_app_config("rag_pipeline")  # type: ignore[assignment]
+        return config.container

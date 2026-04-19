@@ -1,44 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="utf-8" />
-    <title>Resilience Screener</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Опитувальник резильєнтності - версія педагога</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; }
+        h1 { font-size: 1.6rem; margin-bottom: 16px; }
+        h2 { font-size: 1.1rem; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+        p { line-height: 1.55; }
+        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+        .field label { font-weight: 600; font-size: 0.95rem; }
+        .field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+        .error { color: #dc2626; font-size: 0.85rem; }
+        .success { padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; color: #166534; margin-bottom: 16px; }
+        .info { padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; color: #1d4ed8; margin-bottom: 16px; }
+        .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 16px 0; }
+        .question-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
+        .question-number { font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; }
+        .top-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
+        .button-link { text-decoration: none; }
+        .secondary-button { background: white; color: #2563eb; border: 1px solid #2563eb; }
+        button { margin-top: 20px; padding: 10px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .secondary-button:hover { background: #eff6ff; }
+        .feedback-offer { margin-top: 20px; padding: 16px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 6px; }
+        .feedback-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    </style>
 </head>
 <body>
-    <h1>Resilience Screener — Analysis Request</h1>
+    <h1>Опитувальник резильєнтності (версія педагога)</h1>
 
-    {% if success %}
-        <p><strong>Дякуємо. Форму збережено, звіт буде надіслано на email.</strong></p>
+    <p><strong>Педагог:</strong> {{ teacher_full_name }}</p>
+    <p><strong>Кількість завершених оцінювань:</strong> {{ completed_screenings_count }}</p>
+
+    {% if success_message %}
+    <div class="success">{{ success_message }}</div>
     {% endif %}
 
-    <form method="post">
+    {% if feedback_message %}
+    <div class="info">{{ feedback_message }}</div>
+    {% endif %}
+
+    <div class="top-actions">
+        <a class="button-link" href="{% url 'index' %}">
+            <button type="button" class="secondary-button">На головну</button>
+        </a>
+    </div>
+
+    <div class="note">
+        <p><strong>Перед кожним опитуванням</strong></p>
+        <p>ID педагога</p>
+        <p>ID учня</p>
+        <p>Вік учня (відкрите поле)</p>
+        <p>Стать (чоловіча, жіноча)</p>
+    </div>
+
+    <div class="note">
+        <p>
+            Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
+            спостережень за останні 2-4 тижні.
+        </p>
+        <p><strong>Шкала відповіді</strong></p>
+        <p>0 - низький рівень</p>
+        <p>1 - середній рівень</p>
+        <p>2 - високий рівень</p>
+        <p>NA - недостатньо інформації</p>
+    </div>
+
+    {% if show_feedback_offer %}
+    <div class="feedback-offer">
+        <p><strong>Пропозиція пройти форму оцінки використання ШІ-агента "Помічник педагога"</strong></p>
+        <p>
+            Ви вже завершили {{ completed_screenings_count }} оцінювань.
+            Чи хочете зараз пройти форму оцінки використання інструменту?
+        </p>
+
+        <div class="feedback-actions">
+            <a class="button-link" href="{% url 'teacher_feedback_form' %}">
+                <button type="button">Пройти зараз</button>
+            </a>
+
+            <form method="post" action="{% url 'teacher_feedback_decline' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="secondary-button">Відмовитися</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" id="analysis-form">
         {% csrf_token %}
 
-        <h2>Identification</h2>
+        <h2>Ідентифікаційні дані</h2>
         {% for field in id_fields %}
-            <div style="margin-bottom: 12px;">
-                <label>{{ field.label }}</label><br />
-                {{ field }}
-                {% for error in field.errors %}
-                    <div style="color: red;">{{ error }}</div>
-                {% endfor %}
-            </div>
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+            <div class="error">{{ error }}</div>
+            {% endfor %}
+        </div>
         {% endfor %}
 
         {% for group in factor_groups %}
-            <h2>{{ group.label }} (items {{ group.items|join:", " }})</h2>
-            {% for field in group.fields %}
-                <div style="margin-bottom: 10px;">
-                    <label>{{ field.label }}</label><br />
-                    {{ field }}
-                    {% for error in field.errors %}
-                        <div style="color: red;">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endfor %}
+        <h2>{{ group.label }}</h2>
+        {% for item in group.fields %}
+        <div class="question-card">
+            <div class="question-number">№ {{ item.id }}</div>
+            <div class="field">
+                <label for="{{ item.field.id_for_label }}">{{ item.text }}</label>
+                {{ item.field }}
+                {% for error in item.field.errors %}
+                <div class="error">{{ error }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
         {% endfor %}
 
-        <button type="submit">Submit Analysis Request</button>
+        <button type="submit">Надіслати опитувальник</button>
     </form>
+
+    <script>
+        (function () {
+            const form = document.getElementById("analysis-form");
+            if (!form) return;
+
+            let isDirty = false;
+
+            form.addEventListener("change", function () {
+                isDirty = true;
+            });
+
+            form.addEventListener("submit", function () {
+                isDirty = false;
+            });
+
+            window.addEventListener("beforeunload", function (event) {
+                if (!isDirty) return;
+                event.preventDefault();
+                event.returnValue = "";
+            });
+        })();
+    </script>
 </body>
 </html>

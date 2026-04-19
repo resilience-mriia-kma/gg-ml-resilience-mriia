@@ -1,30 +1,41 @@
 from dependency_injector.wiring import Provide, inject
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views import View
 
-from .constants import FACTORS
+from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
 from .container import ResilienceContainer
-from .forms import AnalysisRequestForm, TeacherFeedbackForm
-from .models import AnalysisRequest, TeacherFeedback
-from .notifications import (
-    queue_feedback_request_if_needed,
-    queue_report_ready_notification,
-)
+from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
+from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
+from .notifications import queue_feedback_request_if_needed, queue_report_ready_notification
 from .recommendation_service import RecommendationService
 from .scoring import compute_profile
-
-ID_FIELDS = [
-    "teacher_id",
-    "teacher_email",
-    "student_id",
-    "student_age",
-    "student_gender",
-]
 
 
 def index(request):
     return JsonResponse({"status": "ok", "message": "ml-resilience-mriia"})
+
+
+def _get_active_teacher(request):
+    teacher_profile_id = request.session.get("teacher_profile_id")
+    if not teacher_profile_id:
+        return None
+
+    try:
+        return TeacherProfile.objects.get(id=teacher_profile_id, consent_given=True)
+    except TeacherProfile.DoesNotExist:
+        return None
+
+
+def _feedback_should_be_offered(teacher_profile):
+    if not teacher_profile:
+        return False
+
+    return (
+        teacher_profile.completed_screenings_count >= FEEDBACK_TRIGGER_COUNT
+        and teacher_profile.feedback_status == TeacherProfile.FeedbackStatus.PENDING
+    )
 
 
 class AnalysisFormView(View):
@@ -33,28 +44,35 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: RecommendationService = Provide[
-            ResilienceContainer.recommendation_service
-        ],
+        recommendation_service: RecommendationService = Provide[ResilienceContainer.recommendation_service],
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.recommendation_service = recommendation_service
 
     def get(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
         form = AnalysisRequestForm(initial=self._get_initial_data(request))
-        return self._render(request, form)
+        return self._render(request, teacher_profile, form)
 
     def post(self, request):
-        form = AnalysisRequestForm(request.POST)
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        form = AnalysisRequestForm(request.POST, initial_teacher_id=teacher_profile.teacher_id)
         if not form.is_valid():
-            return self._render(request, form)
+            return self._render(request, teacher_profile, form)
 
         scores = {key: form.get_scores(key) for key in FACTORS}
         profile = compute_profile(scores)
         recommendations = self.recommendation_service.get_recommendations(scores)
 
         analysis_request = AnalysisRequest.objects.create(
+            teacher_profile=teacher_profile,
             teacher_id=form.cleaned_data["teacher_id"],
             teacher_email=form.cleaned_data["teacher_email"],
             student_id=form.cleaned_data["student_id"],
@@ -68,35 +86,51 @@ class AnalysisFormView(View):
         queue_report_ready_notification(analysis_request)
         queue_feedback_request_if_needed(analysis_request)
 
-        return self._render(
-            request,
-            AnalysisRequestForm(initial=self._get_initial_data(request)),
-            success=True,
+        teacher_profile.completed_screenings_count += 1
+        teacher_profile.save(update_fields=["completed_screenings_count", "updated_at"])
+
+        request.session["analysis_success_message"] = (
+            "Опитувальник успішно збережено. Ви можете одразу заповнити форму для наступного учня."
         )
 
-    def _render(self, request, form, *, success=False):
+        fresh_form = AnalysisRequestForm(initial_teacher_id=teacher_profile.teacher_id)
+        return self._render(request, teacher_profile, fresh_form, success=True)
+
+    def _render(self, request, teacher_profile, form, *, success=False):
+        success_message = request.session.pop("analysis_success_message", None)
+        feedback_message = request.session.pop("feedback_message", None)
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
+                "teacher_profile": teacher_profile,
+                "teacher_full_name": teacher_profile.full_name,
                 "id_fields": [form[name] for name in ID_FIELDS],
                 "factor_groups": self._group_factor_fields(form),
                 "success": success,
+                "success_message": success_message,
+                "feedback_message": feedback_message,
+                "show_feedback_offer": _feedback_should_be_offered(teacher_profile),
+                "completed_screenings_count": teacher_profile.completed_screenings_count,
             },
         )
 
     def _group_factor_fields(self, form):
         groups = []
         for factor_key, factor in FACTORS.items():
-            fields = [form[f"{factor_key}_{item}"] for item in factor["items"]]
-            groups.append(
-                {
-                    "label": factor["label"],
-                    "items": factor["items"],
-                    "fields": fields,
-                }
-            )
+            fields = []
+            for item in factor["items"]:
+                field_name = f"{factor_key}_{item['id']}"
+                fields.append(
+                    {
+                        "id": item["id"],
+                        "text": item["text"],
+                        "field": form[field_name],
+                    }
+                )
+            groups.append({"label": factor["label"], "fields": fields})
         return groups
 
     def _get_initial_data(self, request):
@@ -118,7 +152,7 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
-                "value": analysis_request.profile.get(factor_key, "—"),
+                "value": analysis_request.profile.get(factor_key, "-"),
             }
             for factor_key in FACTORS
         ]
@@ -143,6 +177,16 @@ class AnalysisReportView(View):
 class TeacherFeedbackView(View):
     template_name = "resilience_app/feedback_form.html"
 
+    def _render(self, request, form, *, success=False):
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "success": success,
+            },
+        )
+
     def get(self, request):
         form = TeacherFeedbackForm(
             initial={
@@ -166,18 +210,155 @@ class TeacherFeedbackView(View):
             comments=form.cleaned_data["comments"],
         )
 
-        return self._render(
-            request,
-            TeacherFeedbackForm(),
-            success=True,
-        )
+        return self._render(request, TeacherFeedbackForm(), success=True)
 
-    def _render(self, request, form, *, success=False):
+
+class TeacherInfoSheetView(View):
+    template_name = "resilience_app/teacher_info_sheet.html"
+
+    def get(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if teacher_profile:
+            return redirect("analysis_form")
+        return render(request, self.template_name)
+
+
+class TeacherConsentView(View):
+    template_name = "resilience_app/teacher_consent.html"
+
+    def get(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if teacher_profile:
+            return redirect("analysis_form")
+
+        form = TeacherConsentForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = TeacherConsentForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form})
+
+        teacher_id = form.cleaned_data["teacher_id"]
+        full_name = form.cleaned_data["full_name"]
+
+        teacher_profile = TeacherProfile.objects.filter(teacher_id=teacher_id).first()
+
+        if teacher_profile and teacher_profile.consent_given:
+            teacher_profile.full_name = full_name
+            teacher_profile.save(update_fields=["full_name", "updated_at"])
+        else:
+            teacher_profile, _ = TeacherProfile.objects.get_or_create(
+                teacher_id=teacher_id,
+                defaults={"full_name": full_name},
+            )
+            teacher_profile.full_name = full_name
+            teacher_profile.consent_given = True
+            if not teacher_profile.consent_given_at:
+                teacher_profile.consent_given_at = timezone.now()
+            teacher_profile.save()
+
+        request.session["teacher_profile_id"] = teacher_profile.pk
+        request.session["teacher_id"] = teacher_profile.teacher_id
+        request.session["teacher_full_name"] = teacher_profile.full_name
+
+        return redirect("analysis_form")
+
+
+class TeacherFeedbackDeclineView(View):
+    def post(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        teacher_profile.feedback_status = TeacherProfile.FeedbackStatus.DECLINED
+        teacher_profile.save(update_fields=["feedback_status", "updated_at"])
+
+        request.session["feedback_message"] = (
+            "Ви відмовилися від заповнення форми оцінки застосунку. Основний опитувальник залишається доступним."
+        )
+        return redirect("analysis_form")
+
+
+class TeacherFeedbackFormView(View):
+    template_name = "resilience_app/teacher_feedback_form.html"
+
+    def get(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        feedback = getattr(teacher_profile, "app_feedback", None)
+        form = TeacherAppFeedbackForm(initial=self._build_initial(feedback) if feedback else None)
+        success = request.session.pop("feedback_success", False)
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
                 "success": success,
+                "teacher_profile": teacher_profile,
+                "feedback_groups": self._group_feedback_fields(form),
+                "already_submitted": feedback is not None,
             },
         )
+
+    def post(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        form = TeacherAppFeedbackForm(request.POST)
+        if not form.is_valid():
+            return render(
+                request,
+                self.template_name,
+                {
+                    "form": form,
+                    "teacher_profile": teacher_profile,
+                    "feedback_groups": self._group_feedback_fields(form),
+                    "already_submitted": False,
+                },
+            )
+
+        responses = form.get_feedback_responses()
+        comments = form.cleaned_data["comments"]
+
+        TeacherAppFeedback.objects.update_or_create(
+            teacher_profile=teacher_profile,
+            defaults={
+                "responses": responses,
+                "comments": comments,
+            },
+        )
+
+        teacher_profile.feedback_status = TeacherProfile.FeedbackStatus.SUBMITTED
+        teacher_profile.save(update_fields=["feedback_status", "updated_at"])
+
+        request.session["feedback_message"] = (
+            "Форму оцінки використання ШІ-агента успішно збережено. Ви можете продовжувати заповнювати основний опитувальник."
+        )
+        return redirect("analysis_form")
+
+    def _group_feedback_fields(self, form):
+        groups = []
+        for _, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
+            fields = []
+            for field_def in section["fields"]:
+                fields.append(
+                    {
+                        "name": field_def["name"],
+                        "text": field_def["label"],
+                        "field": form[field_def["name"]],
+                    }
+                )
+            groups.append({"label": section["label"], "fields": fields})
+        return groups
+
+    def _build_initial(self, feedback):
+        initial = {"comments": feedback.comments}
+        for _, section_data in feedback.responses.items():
+            for field_name, value in section_data.items():
+                initial[field_name] = value
+        return initial

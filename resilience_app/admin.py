@@ -7,7 +7,14 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .models import AnalysisRequest, ConsentFormInvitation, Notification, TeacherProfile
+from .models import (
+    AnalysisRequest,
+    ConsentFormInvitation,
+    Notification,
+    TeacherAppFeedback,
+    TeacherFeedback,
+    TeacherProfile,
+)
 from .notifications import NotificationService, queue_consent_form_notification
 
 
@@ -20,12 +27,13 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         "full_name",
         "consent_given",
         "completed_screenings_count",
+        "feedback_status",
         "send_form_button",
-        "created_at",
+        "consent_given_at",
     )
     search_fields = ("teacher_id", "teacher_email", "full_name")
-    list_filter = ("consent_given", "created_at")
-    readonly_fields = ("created_at", "updated_at")
+    list_filter = ("consent_given", "feedback_status", "created_at")
+    readonly_fields = ("created_at", "updated_at", "consent_given_at")
     actions = ["send_form_action"]
 
     def get_urls(self):
@@ -104,9 +112,7 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             except Exception as exc:
                 self.message_user(request, f"Error reading file: {exc}", level=messages.ERROR)
 
-            return HttpResponseRedirect(
-                reverse("admin:resilience_app_teacherprofile_changelist")
-            )
+            return HttpResponseRedirect(reverse("admin:resilience_app_teacherprofile_changelist"))
 
         return render(
             request,
@@ -146,21 +152,14 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         if updated_fields:
             invitation.save(update_fields=updated_fields)
 
-        teacher_updated_fields = []
         if teacher.teacher_email != email:
             teacher.teacher_email = email
-            teacher_updated_fields.append("teacher_email")
-        if teacher_updated_fields:
-            teacher.save(update_fields=teacher_updated_fields)
+            teacher.save(update_fields=["teacher_email"])
 
         notification = queue_consent_form_notification(
             teacher_id=teacher.teacher_id,
             teacher_email=email,
-            student_id=None,
-            student_age=None,
-            student_gender=None,
         )
-
         NotificationService().send(notification)
 
         invitation.refresh_from_db()
@@ -189,9 +188,7 @@ class TeacherProfileAdmin(admin.ModelAdmin):
                 level=messages.ERROR,
             )
 
-        return HttpResponseRedirect(
-            reverse("admin:resilience_app_teacherprofile_changelist")
-        )
+        return HttpResponseRedirect(reverse("admin:resilience_app_teacherprofile_changelist"))
 
     def send_form_button(self, obj):
         url = reverse("admin:resilience_app_teacherprofile_send_form", args=[obj.pk])
@@ -200,14 +197,8 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             teacher_email__gt="",
         ).exists()
         if not has_email:
-            return format_html(
-                '<span style="color: #999;">{}</span>',
-                "Send form unavailable",
-            )
-        return format_html(
-            '<a class="button" href="{}">Send form</a>',
-            url,
-        )
+            return format_html('<span style="color: #999;">{}</span>', "Send form unavailable")
+        return format_html('<a class="button" href="{}">Send form</a>', url)
 
     send_form_button.short_description = "Actions"
 
@@ -243,14 +234,13 @@ class ConsentFormInvitationAdmin(admin.ModelAdmin):
     search_fields = ("teacher_id", "teacher_email", "full_name")
     list_filter = ("status", "invitation_sent", "created_at")
     readonly_fields = ("created_at", "updated_at", "sent_at", "error_message")
+    actions = ["mark_as_pending"]
 
     fieldsets = (
         ("Teacher Info", {"fields": ("teacher_id", "teacher_email", "full_name")}),
         ("Invitation Status", {"fields": ("status", "invitation_sent", "sent_at", "error_message")}),
         ("Metadata", {"fields": ("created_at", "updated_at")}),
     )
-
-    actions = ["mark_as_pending"]
 
     def status_badge(self, obj):
         colors = {
@@ -275,17 +265,25 @@ class ConsentFormInvitationAdmin(admin.ModelAdmin):
 
 @admin.register(AnalysisRequest)
 class AnalysisRequestAdmin(admin.ModelAdmin):
-    list_display = ("pk", "teacher_id", "student_id", "student_age", "created_at")
-    search_fields = ("teacher_id", "student_id")
-    list_filter = ("created_at",)
+    list_display = (
+        "pk",
+        "teacher_id",
+        "teacher_email",
+        "student_id",
+        "student_age",
+        "created_at",
+        "report_emailed_at",
+    )
+    search_fields = ("teacher_id", "teacher_email", "student_id")
+    list_filter = ("created_at", "report_emailed_at")
     readonly_fields = ("created_at", "report_emailed_at")
 
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("pk", "type", "recipient_email", "status_badge", "sent_at", "scheduled_at")
-    search_fields = ("recipient_email", "subject")
-    list_filter = ("type", "status", "scheduled_at")
+    list_display = ("pk", "type", "recipient_email", "status_badge", "scheduled_at", "sent_at")
+    search_fields = ("recipient_email", "subject", "dedupe_key")
+    list_filter = ("type", "status", "scheduled_at", "sent_at")
     readonly_fields = ("sent_at", "error_message", "scheduled_at")
 
     def status_badge(self, obj):
@@ -302,3 +300,18 @@ class NotificationAdmin(admin.ModelAdmin):
         )
 
     status_badge.short_description = "Status"
+
+
+@admin.register(TeacherFeedback)
+class TeacherFeedbackAdmin(admin.ModelAdmin):
+    list_display = ("pk", "teacher_id", "teacher_email", "forms_completed", "rating", "created_at")
+    search_fields = ("teacher_id", "teacher_email")
+    list_filter = ("rating", "created_at")
+    readonly_fields = ("created_at",)
+
+
+@admin.register(TeacherAppFeedback)
+class TeacherAppFeedbackAdmin(admin.ModelAdmin):
+    list_display = ("teacher_profile", "created_at", "updated_at")
+    search_fields = ("teacher_profile__teacher_id", "teacher_profile__full_name")
+    readonly_fields = ("created_at", "updated_at")

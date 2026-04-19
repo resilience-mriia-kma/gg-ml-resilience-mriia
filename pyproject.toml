@@ -14,11 +14,14 @@ dependencies = [
     "pypdf>=4.0.0",
     "tiktoken>=0.7.0",
     "faiss-cpu>=1.13.2",
+    "numpy>=2.0.0",
 ]
 
 [dependency-groups]
 dev = [
     "ruff>=0.15.8",
+    "pytest>=8.0.0",
+    "pytest-django>=4.8.0",
 ]
 
 [tool.ruff]

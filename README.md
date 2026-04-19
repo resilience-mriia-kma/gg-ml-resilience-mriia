@@ -1,6 +1,6 @@
 # ml-resilience-mriia
 
-Django project with PostgreSQL (pgvector) for RAG-based document retrieval.
+Django project with PostgreSQL and FAISS for RAG-based document retrieval.
 
 ## Prerequisites
 

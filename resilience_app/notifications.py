@@ -54,35 +54,27 @@ def queue_consent_form_notification(
     student_age: int | None = None,
     student_gender: str | None = None,
 ) -> Notification:
-    """
-    Queue a consent form notification.
-    
-    If student data is provided, the form will be pre-filled with student info.
-    If not, the teacher will be directed to a form where they can enter student data.
-    """
     context = {
         "teacher_id": teacher_id,
         "teacher_email": teacher_email,
     }
-    
-    # Include student info if provided
+
     if student_id:
         context["student_id"] = student_id
-    if student_age:
+    if student_age is not None:
         context["student_age"] = student_age
     if student_gender:
         context["student_gender"] = student_gender
-    
-    # Dedupe key depends on whether we have student info
+
     if student_id:
         dedupe_key = f"consent_form:{teacher_email}:{student_id}"
     else:
         dedupe_key = f"consent_form:{teacher_email}"
-    
+
     return enqueue_notification(
         notification_type=Notification.NotificationType.CONSENT_FORM,
         recipient_email=teacher_email,
-        subject="Запрошення пройти оцінювання резильєнтності учнів",
+        subject="Згода та форма оцінювання резильєнтності",
         context=context,
         attachment_path=settings.CONSENT_DOCUMENT_PATH,
         dedupe_key=dedupe_key,
@@ -122,9 +114,7 @@ def queue_feedback_request_if_needed(
             "forms_completed": completed_forms,
         },
         analysis_request=analysis_request,
-        dedupe_key=(
-            f"feedback_request:{analysis_request.teacher_email}:{completed_forms}"
-        ),
+        dedupe_key=f"feedback_request:{analysis_request.teacher_email}:{completed_forms}",
     )
 
 
@@ -151,32 +141,24 @@ class NotificationService:
 
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
-        
-        # Build form URL with available data
         query_params = {
             "teacher_id": context["teacher_id"],
             "teacher_email": context["teacher_email"],
         }
-        
-        # Add student data if available
         if "student_id" in context:
             query_params["student_id"] = context["student_id"]
         if "student_age" in context:
             query_params["student_age"] = context["student_age"]
         if "student_gender" in context:
             query_params["student_gender"] = context["student_gender"]
-        
-        form_url = self._absolute_url(
-            reverse("analysis_form"),
-            query_params=query_params,
-        )
+
+        form_url = self._absolute_url(reverse("analysis_form"), query_params=query_params)
 
         body = (
             "Вітаємо!\n\n"
-            "Приймаємо вас до участі в дослідженні резильєнтності учнів.\n\n"
-            "Для початку роботи, будь ласка, оцініть резильєнтність своїх учнів.\n\n"
-            f"Перейти до форми: {form_url}\n\n"
-            "У вкладенні додано документ зі згодою на участь у дослідженні.\n"
+            "Просимо пройти оцінювання резильєнтності дитини.\n\n"
+            f"Форма: {form_url}\n\n"
+            "У вкладенні додано документ зі згодою.\n"
             "Після заповнення форми готовий звіт буде надіслано на цю адресу.\n"
         )
 
@@ -192,9 +174,7 @@ class NotificationService:
         if analysis_request is None:
             raise ValueError("Report notification requires analysis_request")
 
-        report_url = self._absolute_url(
-            reverse("analysis_report", kwargs={"pk": analysis_request.pk}),
-        )
+        report_url = self._absolute_url(reverse("analysis_report", kwargs={"pk": analysis_request.pk}))
         feedback_url = self._absolute_url(
             reverse("feedback_form"),
             query_params={
@@ -209,7 +189,7 @@ class NotificationService:
         summary_lines = []
         for factor_key, factor in FACTORS.items():
             summary_lines.append(
-                f"- {factor['label']}: {analysis_request.profile.get(factor_key, '—')}"
+                f"- {factor['label']}: {analysis_request.profile.get(factor_key, '-')}"
             )
 
         recommendation_lines = self._extract_recommendation_lines(

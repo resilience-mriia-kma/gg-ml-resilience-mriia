@@ -1,0 +1,4 @@
+teacher_id,teacher_email,student_id,student_age,student_gender
+TEST001,test.teacher1@example.com,TEST_STUD001,12,М
+TEST002,test.teacher2@example.com,TEST_STUD002,11,Ж
+TEST003,test.teacher3@example.com,TEST_STUD003,13,М

@@ -1,0 +1,22 @@
+[Unit]
+Description=ML Resilience Gunicorn daemon
+After=network.target
+
+[Service]
+Type=exec
+User=webapp
+Group=webapp
+WorkingDirectory=/opt/mriia/code
+Environment="PATH=/opt/mriia/code/.venv/bin"
+EnvironmentFile=/opt/mriia/.env
+ExecStart=/opt/mriia/code/.venv/bin/gunicorn \
+          --access-logfile - \
+          --workers 3 \
+          --bind 127.0.0.1:8000 \
+          config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
