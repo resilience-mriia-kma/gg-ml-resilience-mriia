@@ -157,7 +157,6 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             teacher.save(update_fields=["teacher_email"])
 
         notification = queue_consent_form_notification(
-            teacher_id=teacher.teacher_id,
             teacher_email=email,
         )
         NotificationService().send(notification)
