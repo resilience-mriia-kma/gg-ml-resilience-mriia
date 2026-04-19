@@ -46,5 +46,6 @@ jobs:
           key: ${{ secrets.LIVE_SSH_KEY }}
           port: ${{ secrets.LIVE_PORT }}
           script: |
+            git config --global --add safe.directory /opt/mriia/code
             cd /opt/mriia/code
             ./deploy/deploy.sh
