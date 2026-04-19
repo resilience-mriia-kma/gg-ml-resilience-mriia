@@ -47,7 +47,5 @@ jobs:
           port: ${{ secrets.LIVE_PORT }}
           script: |
             CODE_DIR="/opt/mriia/code"
-            git config --global --add safe.directory $CODE_DIR
-            sudo chown -R $(whoami):$(whoami) $CODE_DIR
             cd $CODE_DIR
             ./deploy/deploy.sh
