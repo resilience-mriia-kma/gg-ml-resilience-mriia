@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
+    <meta charset="utf-8" />
+    <title>Resilience Screener</title>
+</head>
+<body>
+    <h1>Resilience Screener — Analysis Request</h1>
+
+    {% if success %}
+        <p><strong>Дякуємо. Форму збережено, звіт буде надіслано на email.</strong></p>
+    {% endif %}
+
+    <form method="post">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Опитувальник резильєнтності — версія педагога</title>
@@ -95,6 +106,26 @@
 
         <h2>Ідентифікаційні дані</h2>
         {% for field in id_fields %}
+            <div style="margin-bottom: 12px;">
+                <label>{{ field.label }}</label><br />
+                {{ field }}
+                {% for error in field.errors %}
+                    <div style="color: red;">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        {% for group in factor_groups %}
+            <h2>{{ group.label }} (items {{ group.items|join:", " }})</h2>
+            {% for field in group.fields %}
+                <div style="margin-bottom: 10px;">
+                    <label>{{ field.label }}</label><br />
+                    {{ field }}
+                    {% for error in field.errors %}
+                        <div style="color: red;">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
         <div class="field">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}

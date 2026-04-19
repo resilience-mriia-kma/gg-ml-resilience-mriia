@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Analysis Report</title>
+</head>
+<body>
+    <h1>Analysis Report</h1>
+
+    <p><strong>Teacher:</strong> {{ analysis_request.teacher_id }}</p>
+    <p><strong>Teacher email:</strong> {{ analysis_request.teacher_email }}</p>
+    <p><strong>Student:</strong> {{ analysis_request.student_id }}</p>
+    <p><strong>Age:</strong> {{ analysis_request.student_age }}</p>
+    <p><strong>Gender:</strong> {{ analysis_request.student_gender }}</p>
+    <p><strong>Created at:</strong> {{ analysis_request.created_at }}</p>
+
+    <h2>Profile summary</h2>
+    <ul>
+        {% for row in profile_rows %}
+            <li><strong>{{ row.label }}:</strong> {{ row.value }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Recommendations</h2>
+    {% if recommendation_lines %}
+        <ul>
+            {% for line in recommendation_lines %}
+                <li>{{ line }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No recommendations available yet.</p>
+    {% endif %}
+</body>
+</html>
