@@ -1,7 +1,6 @@
 from django.contrib import admin
 
-from .models import AnalysisRequest, Notification, TeacherFeedback
-from .models import AnalysisRequest, TeacherAppFeedback, TeacherProfile
+from .models import AnalysisRequest, Notification, TeacherAppFeedback, TeacherFeedback, TeacherProfile
 
 
 @admin.register(TeacherProfile)
@@ -62,14 +61,6 @@ class TeacherFeedbackAdmin(admin.ModelAdmin):
     )
     search_fields = ("teacher_id", "teacher_email")
     list_filter = ("rating", "created_at")
-    readonly_fields = ("created_at",)
-        "student_id",
-        "student_age",
-        "student_gender",
-        "created_at",
-    )
-    search_fields = ("teacher_id", "student_id")
-    list_filter = ("created_at", "student_gender")
     readonly_fields = ("created_at",)
 
 
