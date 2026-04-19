@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ opts.verbose_name_plural|capfirst }}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>{{ title }}</h1>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h2 style="margin-top: 0;">Upload Teachers from CSV</h2>
+        
+        <p>Upload a CSV file with the following columns:</p>
+        <ul>
+            <li><strong>teacher_id</strong> (required)</li>
+            <li><strong>full_name</strong> (optional)</li>
+            <li><strong>teacher_email</strong> (optional)</li>
+        </ul>
+
+        <p style="font-size: 0.9em; color: #666;">
+            Example CSV:<br>
+            <code>teacher_id,full_name,teacher_email<br>
+            teacher_001,Ivan Ivanov,ivan@school.ua<br>
+            teacher_002,Maria Petrenko,maria@school.ua</code>
+        </p>
+
+        <form method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 15px;">
+                <label for="csv_file" style="display: block; margin-bottom: 5px; font-weight: bold;">
+                    Select CSV file:
+                </label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv" required 
+                       style="padding: 8px; border: 1px solid #ddd; border-radius: 3px;">
+            </div>
+
+            <div>
+                <button type="submit" class="button default" 
+                        style="padding: 10px 20px; background-color: #417690; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                    📤 Upload CSV
+                </button>
+                <a href="{% url 'admin:resilience_app_teacherprofile_changelist' %}" class="button" 
+                   style="padding: 10px 20px; background-color: #999; color: white; border: none; border-radius: 3px; cursor: pointer; text-decoration: none;">
+                    ← Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <p style="margin-top: 30px; color: #666;">
+        <a href="{% url 'admin:resilience_app_teacherprofile_changelist' %}" style="color: #417690;">
+        ← Back to Teachers</a>
+    </p>
+</div>
+
+<style>
+    code {
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
