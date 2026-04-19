@@ -37,7 +37,6 @@ class Command(BaseCommand):
         limit = options.get("limit", 100)
         retry_failed = options.get("retry_failed", False)
 
-        # Build query
         if retry_failed:
             invitations = ConsentFormInvitation.objects.filter(
                 status=ConsentFormInvitation.Status.FAILED,
@@ -57,22 +56,18 @@ class Command(BaseCommand):
 
         for invitation in invitations:
             try:
-                # Queue the notification
                 notification = queue_consent_form_notification(
-                    teacher_id=invitation.teacher_id,
                     teacher_email=invitation.teacher_email,
                 )
 
-                # Send immediately
                 service.send(notification)
 
-                # Mark invitation as sent
                 invitation.mark_sent()
                 sent_count += 1
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"✓ Sent to {invitation.teacher_email} ({invitation.teacher_id})"
+                        f"✓ Sent to {invitation.teacher_email}"
                     )
                 )
 
@@ -89,6 +84,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n📧 Summary: {sent_count} sent, {failed_count} failed"
+                f"\nSummary: {sent_count} sent, {failed_count} failed"
             )
         )
