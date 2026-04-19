@@ -18,6 +18,16 @@ install_dependencies() {
     uv pip install -r pyproject.toml
 }
 
+copy_env() {
+    echo "Copying environment variables..."
+    cd "$PROJECT_DIR"
+    if [ -f .env ]; then
+        cp .env "$CODE_DIR"/.env
+    else
+        echo "Warning: .env file not found in $PROJECT_DIR, skipping copy."
+    fi
+}
+
 run_migrations() {
     echo "Running database migrations..."
     cd "$CODE_DIR"
@@ -48,6 +58,7 @@ main() {
     echo "Starting deployment..."
 
     pull_code
+    copy_env
     install_dependencies
     run_migrations
     collect_static
