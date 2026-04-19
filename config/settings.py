@@ -18,13 +18,13 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
+environ.Env.read_env(BASE_DIR / ".env")  # type: ignore
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-change-me")
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-change-me")  # type: ignore
 
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])  # type: ignore
 
 
 # Application definition
@@ -120,26 +120,27 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # OpenAI
-OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
-OPENAI_LLM_MODEL = env("OPENAI_LLM_MODEL", default="gpt-4o-mini")
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")  # type: ignore
+OPENAI_LLM_MODEL = env("OPENAI_LLM_MODEL", default="gpt-4o-mini")  # type: ignore
 
 # FAISS vector index
 FAISS_INDEX_PATH = BASE_DIR / "faiss_store" / "index.bin"
 
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.smtp.EmailBackend",
+    default="django.core.mail.backends.smtp.EmailBackend",  # type: ignore
 )
-EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_HOST = env("EMAIL_HOST", default="")  # type: ignore
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")  # type: ignore
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")  # type: ignore
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")  # type: ignore
 
-APP_BASE_URL = env("APP_BASE_URL", default="http://localhost:8000")
-CONSENT_DOCUMENT_PATH = env("CONSENT_DOCUMENT_PATH", default="")
+APP_BASE_URL = env("APP_BASE_URL", default="http://localhost:8000")  # type: ignore
+CONSENT_DOCUMENT_PATH = env("CONSENT_DOCUMENT_PATH", default="")  # type: ignore
 # Knowledge base sources directory
-RAW_SOURCES_DIR = env("RAW_SOURCES_DIR", default=str(BASE_DIR / "raw_sources"))
+RAW_SOURCES_DIR = env("RAW_SOURCES_DIR", default=str(BASE_DIR / "raw_sources"))  # type: ignore
