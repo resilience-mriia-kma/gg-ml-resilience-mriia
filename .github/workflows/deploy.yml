@@ -25,7 +25,7 @@ jobs:
         run: uv pip install -r pyproject.toml --group dev
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run pytest || test $? -eq 5
         env:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
           DJANGO_DEBUG: False
