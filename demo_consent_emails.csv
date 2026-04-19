@@ -1,0 +1,11 @@
+teacher_id,teacher_email,student_id,student_age,student_gender
+TEACH001,maria.kovalenko@school.com,STUD001,12,Ж
+TEACH002,oleksandr.petrenko@school.com,STUD002,11,М
+TEACH003,iryna.shevchenko@school.com,STUD003,13,Ж
+TEACH004,viktor.bondarenko@school.com,STUD004,12,М
+TEACH005,natalia.moroz@school.com,STUD005,10,Ж
+TEACH006,andriy.lysenko@school.com,STUD006,14,М
+TEACH007,oksana.kravchenko@school.com,STUD007,11,Ж
+TEACH008,dmitro.savchenko@school.com,STUD008,12,М
+TEACH009,svitlana.tkachenko@school.com,STUD009,13,Ж
+TEACH010,yuriy.marchenko@school.com,STUD010,11,М
