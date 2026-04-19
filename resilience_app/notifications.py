@@ -48,28 +48,13 @@ def enqueue_notification(
 
 def queue_consent_form_notification(
     *,
-    teacher_id: str,
     teacher_email: str,
-    student_id: str | None = None,
-    student_age: int | None = None,
-    student_gender: str | None = None,
 ) -> Notification:
     context = {
-        "teacher_id": teacher_id,
         "teacher_email": teacher_email,
     }
 
-    if student_id:
-        context["student_id"] = student_id
-    if student_age is not None:
-        context["student_age"] = student_age
-    if student_gender:
-        context["student_gender"] = student_gender
-
-    if student_id:
-        dedupe_key = f"consent_form:{teacher_email}:{student_id}"
-    else:
-        dedupe_key = f"consent_form:{teacher_email}"
+    dedupe_key = f"consent_form:{teacher_email}"
 
     return enqueue_notification(
         notification_type=Notification.NotificationType.CONSENT_FORM,
@@ -109,7 +94,6 @@ def queue_feedback_request_if_needed(
         recipient_email=analysis_request.teacher_email,
         subject="Поділіться коротким фідбеком про систему",
         context={
-            "teacher_id": analysis_request.teacher_id,
             "teacher_email": analysis_request.teacher_email,
             "forms_completed": completed_forms,
         },
@@ -141,23 +125,15 @@ class NotificationService:
 
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
-        query_params = {
-            "teacher_id": context["teacher_id"],
-            "teacher_email": context["teacher_email"],
-        }
-        if "student_id" in context:
-            query_params["student_id"] = context["student_id"]
-        if "student_age" in context:
-            query_params["student_age"] = context["student_age"]
-        if "student_gender" in context:
-            query_params["student_gender"] = context["student_gender"]
-
-        form_url = self._absolute_url(reverse("analysis_form"), query_params=query_params)
+        consent_url = self._absolute_url(
+            reverse("teacher_consent"),
+            query_params={"email": context["teacher_email"]},
+        )
 
         body = (
             "Вітаємо!\n\n"
-            "Просимо пройти оцінювання резильєнтності дитини.\n\n"
-            f"Форма: {form_url}\n\n"
+            "Просимо ознайомитись з інформаційним листом та надати згоду на участь у дослідженні.\n\n"
+            f"Посилання: {consent_url}\n\n"
             "У вкладенні додано документ зі згодою.\n"
             "Після заповнення форми готовий звіт буде надіслано на цю адресу.\n"
         )
@@ -174,16 +150,8 @@ class NotificationService:
         if analysis_request is None:
             raise ValueError("Report notification requires analysis_request")
 
-        report_url = self._absolute_url(reverse("analysis_report", kwargs={"pk": analysis_request.pk}))
-        feedback_url = self._absolute_url(
-            reverse("feedback_form"),
-            query_params={
-                "teacher_id": analysis_request.teacher_id,
-                "teacher_email": analysis_request.teacher_email,
-                "forms_completed": AnalysisRequest.objects.filter(
-                    teacher_email=analysis_request.teacher_email,
-                ).count(),
-            },
+        report_url = self._absolute_url(
+            reverse("analysis_report", kwargs={"pk": analysis_request.pk})
         )
 
         summary_lines = []
@@ -209,7 +177,6 @@ class NotificationService:
             "Ключові рекомендації:\n"
             f"{recommendation_block}\n\n"
             f"Повний звіт: {report_url}\n"
-            f"Фідбек: {feedback_url}\n"
         )
 
         self._send_email(
@@ -225,18 +192,13 @@ class NotificationService:
     def _send_feedback_request(self, notification: Notification) -> None:
         context = notification.context
         feedback_url = self._absolute_url(
-            reverse("feedback_form"),
-            query_params={
-                "teacher_id": context["teacher_id"],
-                "teacher_email": context["teacher_email"],
-                "forms_completed": context["forms_completed"],
-            },
+            reverse("teacher_feedback_form"),
         )
 
         body = (
             "Дякуємо за використання системи.\n\n"
             f"Ви вже заповнили {context['forms_completed']} форм.\n"
-            "Будь ласка, залиште короткий фідбек:\n"
+            "Будь ласка, залиште короткий фідбек про зручність системи:\n"
             f"{feedback_url}\n"
         )
 

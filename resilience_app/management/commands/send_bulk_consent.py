@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = "Send consent form emails in bulk from CSV file"
 
     def add_arguments(self, parser):
-        parser.add_argument("csv_file", type=str, help="Path to CSV file with teacher/student data")
+        parser.add_argument("csv_file", type=str, help="Path to CSV file with teacher email data")
         parser.add_argument(
             "--dry-run", action="store_true", help="Show what would be sent without actually sending"
         )
@@ -35,7 +35,7 @@ class Command(BaseCommand):
         try:
             with open(csv_file, "r", encoding="utf-8") as file:
                 reader = csv.DictReader(file)
-                required_fields = {"teacher_id", "teacher_email", "student_id", "student_age", "student_gender"}
+                required_fields = {"teacher_email"}
 
                 if not required_fields.issubset(reader.fieldnames or []):
                     missing = required_fields - set(reader.fieldnames or [])
@@ -60,25 +60,17 @@ class Command(BaseCommand):
         self.show_summary(notifications_created, notifications_sent, errors, dry_run, send_now)
 
     def process_row(self, row, row_num, dry_run, send_now):
-        teacher_id = row["teacher_id"].strip()
         teacher_email = row["teacher_email"].strip()
-        student_id = row["student_id"].strip()
-        student_age = int(row["student_age"])
-        student_gender = row["student_gender"].strip()
 
         if not teacher_email:
             raise ValueError("teacher_email is required")
 
         if dry_run:
-            self.stdout.write(f"  Would send consent email to: {teacher_email} (teacher: {teacher_id})")
+            self.stdout.write(f"  Would send consent email to: {teacher_email}")
             return
 
         notification = queue_consent_form_notification(
-            teacher_id=teacher_id,
             teacher_email=teacher_email,
-            student_id=student_id,
-            student_age=student_age,
-            student_gender=student_gender,
         )
 
         self.stdout.write(f"  Queued consent notification for: {teacher_email}")

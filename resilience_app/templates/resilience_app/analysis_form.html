@@ -42,32 +42,6 @@
     <div class="info">{{ feedback_message }}</div>
     {% endif %}
 
-    <div class="top-actions">
-        <a class="button-link" href="{% url 'index' %}">
-            <button type="button" class="secondary-button">На головну</button>
-        </a>
-    </div>
-
-    <div class="note">
-        <p><strong>Перед кожним опитуванням</strong></p>
-        <p>ID педагога</p>
-        <p>ID учня</p>
-        <p>Вік учня (відкрите поле)</p>
-        <p>Стать (чоловіча, жіноча)</p>
-    </div>
-
-    <div class="note">
-        <p>
-            Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
-            спостережень за останні 2-4 тижні.
-        </p>
-        <p><strong>Шкала відповіді</strong></p>
-        <p>0 - низький рівень</p>
-        <p>1 - середній рівень</p>
-        <p>2 - високий рівень</p>
-        <p>NA - недостатньо інформації</p>
-    </div>
-
     {% if show_feedback_offer %}
     <div class="feedback-offer">
         <p><strong>Пропозиція пройти форму оцінки використання ШІ-агента "Помічник педагога"</strong></p>
@@ -75,12 +49,10 @@
             Ви вже завершили {{ completed_screenings_count }} оцінювань.
             Чи хочете зараз пройти форму оцінки використання інструменту?
         </p>
-
         <div class="feedback-actions">
             <a class="button-link" href="{% url 'teacher_feedback_form' %}">
                 <button type="button">Пройти зараз</button>
             </a>
-
             <form method="post" action="{% url 'teacher_feedback_decline' %}" style="margin: 0;">
                 {% csrf_token %}
                 <button type="submit" class="secondary-button">Відмовитися</button>
@@ -89,10 +61,22 @@
     </div>
     {% endif %}
 
+    <div class="note">
+        <p>
+            Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
+            спостережень за останні 2-4 тижні.
+        </p>
+        <p><strong>Шкала відповіді</strong></p>
+        <p>0 — низький рівень</p>
+        <p>1 — середній рівень</p>
+        <p>2 — високий рівень</p>
+        <p>NA — недостатньо інформації</p>
+    </div>
+
     <form method="post" id="analysis-form">
         {% csrf_token %}
 
-        <h2>Ідентифікаційні дані</h2>
+        <h2>Ідентифікаційні дані учня</h2>
         {% for field in id_fields %}
         <div class="field">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
