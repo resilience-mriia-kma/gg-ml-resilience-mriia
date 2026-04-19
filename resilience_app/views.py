@@ -1,3 +1,5 @@
+import hashlib
+
 from dependency_injector.wiring import Provide, inject
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,6 +13,10 @@ from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, Teache
 from .notifications import queue_feedback_request_if_needed, queue_report_ready_notification
 from .recommendation_service import RecommendationService
 from .scoring import compute_profile
+
+
+def _hash_email(email: str) -> str:
+    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:16]
 
 
 def index(request):
@@ -55,7 +61,7 @@ class AnalysisFormView(View):
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
-        form = AnalysisRequestForm(initial=self._get_initial_data(request))
+        form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
 
     def post(self, request):
@@ -73,8 +79,8 @@ class AnalysisFormView(View):
 
         analysis_request = AnalysisRequest.objects.create(
             teacher_profile=teacher_profile,
-            teacher_id=form.cleaned_data["teacher_id"],
-            teacher_email=form.cleaned_data["teacher_email"],
+            teacher_id=teacher_profile.teacher_id,
+            teacher_email=teacher_profile.teacher_email or "",
             student_id=form.cleaned_data["student_id"],
             student_age=form.cleaned_data["student_age"],
             student_gender=form.cleaned_data["student_gender"],
@@ -86,14 +92,17 @@ class AnalysisFormView(View):
         queue_report_ready_notification(analysis_request)
         queue_feedback_request_if_needed(analysis_request)
 
-        teacher_profile.completed_screenings_count += 1
-        teacher_profile.save(update_fields=["completed_screenings_count", "updated_at"])
+        from django.db.models import F
+        TeacherProfile.objects.filter(pk=teacher_profile.pk).update(
+            completed_screenings_count=F("completed_screenings_count") + 1
+        )
+        teacher_profile.refresh_from_db()
 
         request.session["analysis_success_message"] = (
             "Опитувальник успішно збережено. Ви можете одразу заповнити форму для наступного учня."
         )
 
-        fresh_form = AnalysisRequestForm(initial_teacher_id=teacher_profile.teacher_id)
+        fresh_form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, fresh_form, success=True)
 
     def _render(self, request, teacher_profile, form, *, success=False):
@@ -133,13 +142,10 @@ class AnalysisFormView(View):
             groups.append({"label": factor["label"], "fields": fields})
         return groups
 
-    def _get_initial_data(self, request):
+    def _get_initial_data(self, teacher_profile):
         return {
-            "teacher_id": request.GET.get("teacher_id", ""),
-            "teacher_email": request.GET.get("teacher_email", ""),
-            "student_id": request.GET.get("student_id", ""),
-            "student_age": request.GET.get("student_age", ""),
-            "student_gender": request.GET.get("student_gender", ""),
+            "teacher_id": teacher_profile.teacher_id,
+            "teacher_email": teacher_profile.teacher_email or "",
         }
 
 
@@ -231,13 +237,18 @@ class TeacherConsentView(View):
         if teacher_profile:
             return redirect("analysis_form")
 
-        form = TeacherConsentForm()
-        return render(request, self.template_name, {"form": form})
+        email = request.GET.get("email", "")
+        teacher_id = _hash_email(email) if email else ""
+        form = TeacherConsentForm(initial={"teacher_id": teacher_id})
+        return render(request, self.template_name, {
+            "form": form,
+            "email_prefilled": bool(email),
+        })
 
     def post(self, request):
         form = TeacherConsentForm(request.POST)
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form})
+            return render(request, self.template_name, {"form": form, "email_prefilled": False})
 
         teacher_id = form.cleaned_data["teacher_id"]
         full_name = form.cleaned_data["full_name"]
@@ -261,8 +272,13 @@ class TeacherConsentView(View):
         request.session["teacher_profile_id"] = teacher_profile.pk
         request.session["teacher_id"] = teacher_profile.teacher_id
         request.session["teacher_full_name"] = teacher_profile.full_name
+        request.session.modified = True
 
-        return redirect("analysis_form")
+        return render(request, self.template_name, {
+            "form": form,
+            "email_prefilled": True,
+            "consent_success": True,
+        })
 
 
 class TeacherFeedbackDeclineView(View):
@@ -336,10 +352,17 @@ class TeacherFeedbackFormView(View):
         teacher_profile.feedback_status = TeacherProfile.FeedbackStatus.SUBMITTED
         teacher_profile.save(update_fields=["feedback_status", "updated_at"])
 
-        request.session["feedback_message"] = (
-            "Форму оцінки використання ШІ-агента успішно збережено. Ви можете продовжувати заповнювати основний опитувальник."
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "teacher_profile": teacher_profile,
+                "feedback_groups": self._group_feedback_fields(form),
+                "already_submitted": True,
+                "success": True,
+            },
         )
-        return redirect("analysis_form")
 
     def _group_feedback_fields(self, form):
         groups = []

@@ -48,7 +48,7 @@ LIKERT_5_CHOICES = [
     ("5", "5"),
 ]
 
-ID_FIELDS = ["teacher_id", "student_id", "student_age", "student_gender"]
+ID_FIELDS = ["student_id", "student_age", "student_gender"]
 
 FEEDBACK_TRIGGER_COUNT = 10
 
