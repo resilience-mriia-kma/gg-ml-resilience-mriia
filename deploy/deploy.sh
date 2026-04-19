@@ -7,6 +7,7 @@ CODE_DIR="$PROJECT_DIR/code"
 pull_code() {
     echo "Pulling latest code..."
     cd "$CODE_DIR"
+    git config --global --add safe.directory "$CODE_DIR"
     git fetch origin main
     git reset --hard origin/main
 }
