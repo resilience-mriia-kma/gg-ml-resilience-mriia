@@ -1,0 +1,50 @@
+name: Deploy app to production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install dependencies
+        run: uv pip install -r pyproject.toml --group dev
+
+      - name: Run tests
+        run: uv run pytest
+        env:
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DJANGO_DEBUG: False
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIVE_HOST }}
+          username: ${{ secrets.LIVE_USER }}
+          key: ${{ secrets.LIVE_SSH_KEY }}
+          port: ${{ secrets.LIVE_PORT }}
+          script: |
+            cd /opt/mriia/code
+            ./deploy/deploy.sh

@@ -136,6 +136,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
 .envrc
 .venv
 env/
@@ -213,3 +214,7 @@ raw_sources/*
 
 faiss_store/*
 !faiss_store/.gitkeep
+
+
+# idea
+.idea/
