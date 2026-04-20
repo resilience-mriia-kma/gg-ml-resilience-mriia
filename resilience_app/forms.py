@@ -4,14 +4,11 @@ from .constants import FACTORS, GENDER_CHOICES, SCORE_CHOICES, TEACHER_APP_FEEDB
 
 
 class AnalysisRequestForm(forms.Form):
-    teacher_id = forms.CharField(max_length=128, widget=forms.HiddenInput())
-    teacher_email = forms.EmailField(widget=forms.HiddenInput())
     student_id = forms.CharField(max_length=128, label="ID учня")
     student_age = forms.IntegerField(min_value=1, max_value=100, label="Вік учня")
     student_gender = forms.ChoiceField(label="Стать", choices=GENDER_CHOICES)
 
     def __init__(self, *args, **kwargs):
-        kwargs.pop("initial_teacher_id", None)
         super().__init__(*args, **kwargs)
 
         for factor_key, factor in FACTORS.items():
@@ -52,6 +49,7 @@ class TeacherFeedbackForm(forms.Form):
         ],
         widget=forms.RadioSelect,
     )
+
     comments = forms.CharField(
         label="Comments",
         required=False,
@@ -63,6 +61,10 @@ class TeacherConsentForm(forms.Form):
     teacher_id = forms.CharField(
         max_length=128,
         required=True,
+        widget=forms.HiddenInput(),
+    )
+    teacher_email = forms.EmailField(
+        required=False,
         widget=forms.HiddenInput(),
     )
     full_name = forms.CharField(
@@ -120,10 +122,12 @@ class TeacherAppFeedbackForm(forms.Form):
 
     def get_feedback_responses(self):
         responses = {}
+
         for section_key, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
             section_responses = {}
             for field_def in section["fields"]:
                 name = field_def["name"]
                 section_responses[name] = self.cleaned_data.get(name)
             responses[section_key] = section_responses
+
         return responses

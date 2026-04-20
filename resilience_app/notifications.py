@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import logging
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -12,58 +9,29 @@ from django.utils import timezone
 from .constants import FACTORS
 from .models import AnalysisRequest, Notification
 
-logger = logging.getLogger(__name__)
-
 
 def enqueue_notification(
     *,
-    notification_type: str,
-    recipient_email: str,
-    subject: str,
-    context: dict | None = None,
-    analysis_request: AnalysisRequest | None = None,
-    attachment_path: str = "",
-    dedupe_key: str | None = None,
-    scheduled_at=None,
-) -> Notification:
-    defaults = {
-        "analysis_request": analysis_request,
-        "type": notification_type,
-        "recipient_email": recipient_email,
-        "subject": subject,
-        "context": context or {},
-        "attachment_path": attachment_path,
-        "scheduled_at": scheduled_at or timezone.now(),
-    }
-
-    if dedupe_key:
-        notification, _ = Notification.objects.get_or_create(
-            dedupe_key=dedupe_key,
-            defaults=defaults,
-        )
-        return notification
-
-    return Notification.objects.create(**defaults)
-
-
-def queue_consent_form_notification(
-    *,
-    teacher_email: str,
-) -> Notification:
-    context = {
-        "teacher_email": teacher_email,
-    }
-
-    dedupe_key = f"consent_form:{teacher_email}"
-
-    return enqueue_notification(
-        notification_type=Notification.NotificationType.CONSENT_FORM,
-        recipient_email=teacher_email,
-        subject="Згода та форма оцінювання резильєнтності",
-        context=context,
-        attachment_path=settings.CONSENT_DOCUMENT_PATH,
+    notification_type,
+    recipient_email,
+    subject,
+    context,
+    analysis_request=None,
+    attachment_path="",
+    dedupe_key="",
+):
+    notification, _ = Notification.objects.get_or_create(
         dedupe_key=dedupe_key,
+        defaults={
+            "type": notification_type,
+            "recipient_email": recipient_email,
+            "subject": subject,
+            "context": context,
+            "analysis_request": analysis_request,
+            "attachment_path": attachment_path,
+        },
     )
+    return notification
 
 
 def queue_report_ready_notification(
@@ -83,7 +51,7 @@ def queue_feedback_request_if_needed(
     analysis_request: AnalysisRequest,
 ) -> Notification | None:
     completed_forms = AnalysisRequest.objects.filter(
-        teacher_email=analysis_request.teacher_email,
+        teacher_id=analysis_request.teacher_id,
     ).count()
 
     if completed_forms % 10 != 0:
@@ -94,11 +62,12 @@ def queue_feedback_request_if_needed(
         recipient_email=analysis_request.teacher_email,
         subject="Поділіться коротким фідбеком про систему",
         context={
+            "teacher_id": analysis_request.teacher_id,
             "teacher_email": analysis_request.teacher_email,
             "forms_completed": completed_forms,
         },
         analysis_request=analysis_request,
-        dedupe_key=f"feedback_request:{analysis_request.teacher_email}:{completed_forms}",
+        dedupe_key=f"feedback_request:{analysis_request.teacher_id}:{completed_forms}",
     )
 
 
@@ -112,6 +81,7 @@ class NotificationService:
 
     def send(self, notification: Notification) -> None:
         handler = self.handlers.get(notification.type)
+
         if handler is None:
             notification.mark_failed(f"Unknown notification type: {notification.type}")
             return
@@ -120,11 +90,12 @@ class NotificationService:
             handler(notification)
             notification.mark_sent()
         except Exception as exc:
-            logger.exception("Failed to send notification %s", notification.pk)
             notification.mark_failed(str(exc))
+            raise
 
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
+
         consent_url = self._absolute_url(
             reverse("teacher_consent"),
             query_params={"email": context["teacher_email"]},
@@ -164,6 +135,7 @@ class NotificationService:
             analysis_request.recommendations,
             limit=5,
         )
+
         recommendation_block = (
             "\n".join(f"- {line}" for line in recommendation_lines)
             if recommendation_lines
@@ -191,8 +163,14 @@ class NotificationService:
 
     def _send_feedback_request(self, notification: Notification) -> None:
         context = notification.context
+
         feedback_url = self._absolute_url(
             reverse("teacher_feedback_form"),
+            query_params={
+                "teacher_id": context["teacher_id"],
+                "teacher_email": context["teacher_email"],
+                "forms_completed": context["forms_completed"],
+            },
         )
 
         body = (
@@ -244,6 +222,7 @@ class NotificationService:
         limit: int = 5,
     ) -> list[str]:
         lines = []
+
         for raw_line in recommendations.splitlines():
             line = raw_line.strip().lstrip("-").lstrip("•").strip()
             if not line:
@@ -251,4 +230,5 @@ class NotificationService:
             lines.append(line)
             if len(lines) >= limit:
                 break
+
         return lines

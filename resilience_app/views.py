@@ -1,6 +1,7 @@
 import hashlib
 
 from dependency_injector.wiring import Provide, inject
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -42,6 +43,13 @@ def _feedback_should_be_offered(teacher_profile):
         teacher_profile.completed_screenings_count >= FEEDBACK_TRIGGER_COUNT
         and teacher_profile.feedback_status == TeacherProfile.FeedbackStatus.PENDING
     )
+
+
+def _restore_teacher_session(request, teacher_profile):
+    request.session["teacher_profile_id"] = teacher_profile.pk
+    request.session["teacher_id"] = teacher_profile.teacher_id
+    request.session["teacher_full_name"] = teacher_profile.full_name
+    request.session.modified = True
 
 
 class AnalysisFormView(View):
@@ -92,18 +100,18 @@ class AnalysisFormView(View):
         queue_report_ready_notification(analysis_request)
         queue_feedback_request_if_needed(analysis_request)
 
-        from django.db.models import F
         TeacherProfile.objects.filter(pk=teacher_profile.pk).update(
             completed_screenings_count=F("completed_screenings_count") + 1
         )
         teacher_profile.refresh_from_db()
+        _restore_teacher_session(request, teacher_profile)
 
         request.session["analysis_success_message"] = (
-            "Опитувальник успішно збережено. Ви можете одразу заповнити форму для наступного учня."
+            "Звіт буде надіслано на пошту."
         )
+        request.session["analysis_continue_available"] = True
 
-        fresh_form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
-        return self._render(request, teacher_profile, fresh_form, success=True)
+        return redirect("analysis_success")
 
     def _render(self, request, teacher_profile, form, *, success=False):
         success_message = request.session.pop("analysis_success_message", None)
@@ -147,6 +155,44 @@ class AnalysisFormView(View):
             "teacher_id": teacher_profile.teacher_id,
             "teacher_email": teacher_profile.teacher_email or "",
         }
+
+
+class AnalysisSuccessView(View):
+    template_name = "resilience_app/analysis_success.html"
+
+    def get(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        success_message = request.session.get(
+            "analysis_success_message",
+            "Дякуємо за проходження опитування. Звіт буде надіслано на пошту.",
+        )
+
+        if not request.session.get("analysis_continue_available"):
+            return redirect("analysis_form")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "teacher_profile": teacher_profile,
+                "teacher_full_name": teacher_profile.full_name,
+                "success_message": success_message,
+                "show_feedback_offer": _feedback_should_be_offered(teacher_profile),
+                "completed_screenings_count": teacher_profile.completed_screenings_count,
+            },
+        )
+
+    def post(self, request):
+        teacher_profile = _get_active_teacher(request)
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        request.session.pop("analysis_success_message", None)
+        request.session["analysis_continue_available"] = False
+        return redirect("analysis_form")
 
 
 class AnalysisReportView(View):
@@ -240,10 +286,14 @@ class TeacherConsentView(View):
         email = request.GET.get("email", "")
         teacher_id = _hash_email(email) if email else ""
         form = TeacherConsentForm(initial={"teacher_id": teacher_id})
-        return render(request, self.template_name, {
-            "form": form,
-            "email_prefilled": bool(email),
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "email_prefilled": bool(email),
+            },
+        )
 
     def post(self, request):
         form = TeacherConsentForm(request.POST)
@@ -269,16 +319,17 @@ class TeacherConsentView(View):
                 teacher_profile.consent_given_at = timezone.now()
             teacher_profile.save()
 
-        request.session["teacher_profile_id"] = teacher_profile.pk
-        request.session["teacher_id"] = teacher_profile.teacher_id
-        request.session["teacher_full_name"] = teacher_profile.full_name
-        request.session.modified = True
+        _restore_teacher_session(request, teacher_profile)
 
-        return render(request, self.template_name, {
-            "form": form,
-            "email_prefilled": True,
-            "consent_success": True,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "email_prefilled": True,
+                "consent_success": True,
+            },
+        )
 
 
 class TeacherFeedbackDeclineView(View):
