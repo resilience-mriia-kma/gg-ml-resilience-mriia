@@ -102,7 +102,7 @@ class AnalysisFormView(View):
         self.recommendation_service = recommendation_service
         self.async_recommendation_service = AsyncRecommendationService(recommendation_service)
 
-    async def get(self, request):
+    def get(self, request):
         teacher_profile = _get_active_teacher(request)
         if not teacher_profile:
             return redirect("teacher_info_sheet")
@@ -113,7 +113,7 @@ class AnalysisFormView(View):
         form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
 
-    async def post(self, request):
+    def post(self, request):
         teacher_profile = _get_active_teacher(request)
         if not teacher_profile:
             return redirect("teacher_info_sheet")

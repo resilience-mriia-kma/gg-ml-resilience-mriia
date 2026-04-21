@@ -43,8 +43,7 @@ class AsyncRecommendationService:
         def update_db():
             with transaction.atomic():
                 AnalysisRequest.objects.filter(pk=analysis_request_id).update(
-                    recommendations=recommendations,
-                    sources=sources
+                    recommendations=recommendations, sources=sources
                 )
 
         await asyncio.get_event_loop().run_in_executor(self.executor, update_db)
@@ -61,19 +60,15 @@ class AsyncRecommendationService:
         await asyncio.get_event_loop().run_in_executor(self.executor, update_db)
 
     async def _send_report_notification(self, analysis_request_id: int) -> None:
-        """
-        Send report ready notification once recommendations are generated.
-
-        This notification includes the completed recommendations and is sent only
-        after the background processing is complete.
-        """
         def send_notification():
             try:
                 analysis_request = AnalysisRequest.objects.get(pk=analysis_request_id)
 
-                # Verify that recommendations are actually available before notifying
+                # verify that recommendations are actually available before notifying
                 if not analysis_request.recommendations.strip():
-                    logger.warning(f"Attempted to send report notification for request {analysis_request_id} but recommendations are empty")
+                    logger.warning(
+                        f"Attempted to send report notification for request {analysis_request_id} but recommendations are empty"
+                    )
                     return
 
                 notification_service = NotificationService()
@@ -83,7 +78,9 @@ class AsyncRecommendationService:
                     notification_service.send(report_notification)
                     logger.info(f"Report ready notification sent successfully for request {analysis_request_id}")
                 else:
-                    logger.warning(f"No report notification queued for request {analysis_request_id} (likely missing email)")
+                    logger.warning(
+                        f"No report notification queued for request {analysis_request_id} (likely missing email)"
+                    )
 
             except AnalysisRequest.DoesNotExist:
                 logger.error(f"AnalysisRequest {analysis_request_id} not found when sending report notification")
@@ -92,10 +89,28 @@ class AsyncRecommendationService:
 
         await asyncio.get_event_loop().run_in_executor(self.executor, send_notification)
 
-    def start_background_task(self, analysis_request_id: int, scores: dict) -> asyncio.Task:
-        task = asyncio.create_task(self.generate_recommendations_async(analysis_request_id, scores))
-        task.add_done_callback(
-            lambda t: logger.info(f"Background recommendation task completed for request {analysis_request_id}")
-        )
+    def start_background_task(self, analysis_request_id: int, scores: dict) -> None:
+        import threading
 
-        return task
+        def run_async_task():
+            loop = None
+            try:
+                # a new event loop for this thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                # run async task
+                loop.run_until_complete(self.generate_recommendations_async(analysis_request_id, scores))
+
+                logger.info(f"Background recommendation task completed for request {analysis_request_id}")
+            except Exception as e:
+                logger.exception(f"Background task failed for request {analysis_request_id}: {e}")
+            finally:
+                if loop is not None:
+                    loop.close()
+
+        # task in a separate thread
+        thread = threading.Thread(target=run_async_task, name=f"recommendations-{analysis_request_id}", daemon=True)
+        thread.start()
+
+        logger.info(f"Started background recommendation task for request {analysis_request_id}")
