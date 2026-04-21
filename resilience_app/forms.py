@@ -6,6 +6,7 @@ from .constants import FACTORS, GENDER_CHOICES, SCORE_CHOICES, TEACHER_APP_FEEDB
 class AnalysisRequestForm(forms.Form):
     teacher_id = forms.CharField(max_length=128, widget=forms.HiddenInput())
     teacher_email = forms.EmailField(widget=forms.HiddenInput())
+    submission_token = forms.CharField(required=False, widget=forms.HiddenInput())
     student_id = forms.CharField(max_length=128, label="ID учня")
     student_age = forms.IntegerField(min_value=1, max_value=100, label="Вік учня")
     student_gender = forms.ChoiceField(label="Стать", choices=GENDER_CHOICES)
