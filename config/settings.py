@@ -102,3 +102,48 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")  #
 APP_BASE_URL = env("APP_BASE_URL", default="http://localhost:8000")  # type: ignore
 CONSENT_DOCUMENT_PATH = env("CONSENT_DOCUMENT_PATH", default="")  # type: ignore
 RAW_SOURCES_DIR = env("RAW_SOURCES_DIR", default=str(BASE_DIR / "raw_sources"))  # type: ignore
+
+# Logging Configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "{levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+            "level": "INFO",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "resilience_app": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "rag_pipeline": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "": {  # Root logger
+            "handlers": ["console"],
+            "level": "WARNING",
+        },
+    },
+}
+
+# Enhanced logging for production
+if not DEBUG:
+    LOGGING["handlers"]["console"]["level"] = "WARNING"
+    LOGGING["loggers"]["django"]["level"] = "WARNING"

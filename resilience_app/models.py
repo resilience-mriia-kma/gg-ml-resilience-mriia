@@ -32,6 +32,10 @@ class TeacherProfile(models.Model):
             self.teacher_id = generate_teacher_id(teacher_email=self.teacher_email)
         super().save(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "Teacher Profile"
+        verbose_name_plural = "Teacher Profiles"
+
     def __str__(self):
         return f"{self.teacher_id} - {self.full_name}"
 
@@ -65,6 +69,11 @@ class AnalysisRequest(models.Model):
         help_text="Dict of factor_key -> low/medium/high",
     )
     recommendations = models.TextField(blank=True)
+    sources = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="List of sources used for recommendations",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     report_emailed_at = models.DateTimeField(null=True, blank=True)
@@ -73,10 +82,7 @@ class AnalysisRequest(models.Model):
         ordering = ("-created_at",)
 
     def __str__(self):
-        return (
-            f"Request {self.pk} - teacher {self.teacher_id} "
-            f"({self.teacher_email}), student {self.student_id}"
-        )
+        return f"Request {self.pk} - teacher {self.teacher_id} ({self.teacher_email}), student {self.student_id}"
 
 
 class Notification(models.Model):
@@ -121,6 +127,9 @@ class Notification(models.Model):
     class Meta:
         ordering = ("scheduled_at", "pk")
 
+    def __str__(self):
+        return f"{self.type} -> {self.recipient_email} [{self.status}]"
+
     def mark_sent(self):
         self.status = self.Status.SENT
         self.sent_at = timezone.now()
@@ -131,9 +140,6 @@ class Notification(models.Model):
         self.status = self.Status.FAILED
         self.error_message = error_message[:5000]
         self.save(update_fields=["status", "error_message"])
-
-    def __str__(self):
-        return f"{self.type} -> {self.recipient_email} [{self.status}]"
 
 
 class ConsentFormInvitation(models.Model):
@@ -163,6 +169,9 @@ class ConsentFormInvitation(models.Model):
         verbose_name = "Consent Form Invitation"
         verbose_name_plural = "Consent Form Invitations"
 
+    def __str__(self):
+        return f"{self.teacher_id} ({self.teacher_email}) - {self.get_status_display()}"
+
     def mark_sent(self):
         self.status = self.Status.SENT
         self.sent_at = timezone.now()
@@ -174,9 +183,6 @@ class ConsentFormInvitation(models.Model):
         self.status = self.Status.FAILED
         self.error_message = error_message[:5000]
         self.save(update_fields=["status", "error_message"])
-
-    def __str__(self):
-        return f"{self.teacher_id} ({self.teacher_email}) - {self.get_status_display()}"
 
 
 class TeacherFeedback(models.Model):
@@ -191,10 +197,7 @@ class TeacherFeedback(models.Model):
         ordering = ("-created_at",)
 
     def __str__(self):
-        return (
-            f"Feedback from {self.teacher_id} "
-            f"({self.teacher_email}) after {self.forms_completed} forms"
-        )
+        return f"Feedback from {self.teacher_id} ({self.teacher_email}) after {self.forms_completed} forms"
 
 
 class TeacherAppFeedback(models.Model):
@@ -209,6 +212,10 @@ class TeacherAppFeedback(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Teacher App Feedback"
+        verbose_name_plural = "Teacher App Feedbacks"
 
     def __str__(self):
         return f"Feedback - {self.teacher_profile.teacher_id}"

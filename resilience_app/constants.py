@@ -1,5 +1,11 @@
 from collections import OrderedDict
 
+RESILIENCE_LEVEL_UKRAINIAN = {
+    "low": "низький",
+    "medium": "середній",
+    "high": "високий",
+}
+
 SCORE_CHOICES = [
     ("", "---------"),
     ("0", "0 - низький рівень"),
