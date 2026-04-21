@@ -11,7 +11,7 @@ from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS, TEACHER_APP_F
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
-from .notifications import queue_feedback_request_if_needed, queue_report_ready_notification
+from .notifications import NotificationService, queue_feedback_request_if_needed, queue_report_ready_notification
 from .recommendation_service import RecommendationService
 from .scoring import compute_profile
 
@@ -101,8 +101,16 @@ class AnalysisFormView(View):
             recommendations=recommendations,
         )
 
-        queue_report_ready_notification(analysis_request)
-        queue_feedback_request_if_needed(analysis_request)
+        # Send notifications immediately
+        notification_service = NotificationService()
+
+        report_notification = queue_report_ready_notification(analysis_request)
+        if report_notification:
+            notification_service.send(report_notification)
+
+        feedback_notification = queue_feedback_request_if_needed(analysis_request)
+        if feedback_notification:
+            notification_service.send(feedback_notification)
 
         TeacherProfile.objects.filter(pk=teacher_profile.pk).update(
             completed_screenings_count=F("completed_screenings_count") + 1
@@ -167,11 +175,7 @@ class AnalysisReportView(View):
             for factor_key in FACTORS
         ]
 
-        recommendation_lines = [
-            line.strip()
-            for line in analysis_request.recommendations.splitlines()
-            if line.strip()
-        ]
+        recommendation_lines = [line.strip() for line in analysis_request.recommendations.splitlines() if line.strip()]
 
         return render(
             request,
@@ -427,6 +431,7 @@ class AnalysisProcessingView(View):
             return redirect("teacher_info_sheet")
 
         from .constants import GENDER_CHOICES
+
         gender_display = dict(GENDER_CHOICES).get(analysis_request.student_gender, analysis_request.student_gender)
 
         return render(

@@ -68,7 +68,14 @@ def queue_consent_form_notification(
 
 def queue_report_ready_notification(
     analysis_request: AnalysisRequest,
-) -> Notification:
+) -> Notification | None:
+    if not analysis_request.teacher_email or not analysis_request.teacher_email.strip():
+        logger.warning(
+            "Skipping report notification for analysis_request %s - no email address",
+            analysis_request.pk
+        )
+        return None
+
     return enqueue_notification(
         notification_type=Notification.NotificationType.REPORT_READY,
         recipient_email=analysis_request.teacher_email,
@@ -82,6 +89,9 @@ def queue_report_ready_notification(
 def queue_feedback_request_if_needed(
     analysis_request: AnalysisRequest,
 ) -> Notification | None:
+    if not analysis_request.teacher_email or not analysis_request.teacher_email.strip():
+        return None
+
     completed_forms = AnalysisRequest.objects.filter(
         teacher_email=analysis_request.teacher_email,
     ).count()

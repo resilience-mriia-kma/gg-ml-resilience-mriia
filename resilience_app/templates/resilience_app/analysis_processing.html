@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Обробка результатів - Опитувальник резільєнтності</title>
+    <title>Оцінка завершена - Опитувальник резільєнтності</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #111827; text-align: center; }
         .processing-container {
@@ -66,12 +66,12 @@
 </head>
 <body>
     <div class="processing-container">
-        <h1>Обробка результатів опитувальника</h1>
+        <h1>Оцінка резільєнтності завершена</h1>
 
-        <div class="spinner"></div>
+        <div style="font-size: 4rem; color: #10b981; margin: 24px 0;">✓</div>
 
         <div class="status-message">
-            Аналіз резільєнтності в процесі...
+            Аналіз успішно завершено!
         </div>
 
         <div class="student-info">
@@ -83,20 +83,20 @@
         <div class="details">
             Ваші відповіді успішно зафіксовано та передано до системи аналізу.
             <br><br>
-            RAG-звіт з рекомендаціями буде надіслано на електронну пошту
-            <strong>{{ teacher_email }}</strong> протягом кількох хвилин.
+            {% if teacher_email %}
+                RAG-звіт з рекомендаціями буде надіслано на електронну пошту
+                <strong>{{ teacher_email }}</strong> протягом кількох хвилин.
+                <br><br>
+            {% else %}
+                RAG-звіт готується та буде доступний для перегляду через посилання.
+                <br><br>
+            {% endif %}
+            <em>Процес завершено успішно!</em>
         </div>
 
-        <a href="{% url 'analysis_form' %}" class="button secondary-button">
-            Повернутися до форми
+        <a href="{% url 'analysis_form' %}" class="button">
+            Провести нову оцінку
         </a>
     </div>
-
-    <script>
-        // Auto-redirect after 8 seconds to prevent users from staying on processing screen
-        setTimeout(function() {
-            window.location.href = '{% url "analysis_form" %}';
-        }, 8000);
-    </script>
 </body>
 </html>

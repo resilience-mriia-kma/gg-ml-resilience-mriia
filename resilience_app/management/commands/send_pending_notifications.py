@@ -34,7 +34,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Processed {len(notifications)} notifications. "
-                f"Sent: {sent_count}. Failed: {failed_count}."
+                f"Processed {len(notifications)} notifications. Sent: {sent_count}. Failed: {failed_count}."
             )
         )
