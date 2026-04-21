@@ -16,7 +16,8 @@ from .models import (
     TeacherFeedback,
     TeacherProfile,
 )
-from .notifications import Notification, NotificationService, enqueue_notification
+from .notifications import NotificationService, enqueue_notification
+from .teacher_ids import generate_teacher_id, normalize_teacher_email
 
 
 @admin.register(TeacherProfile)
@@ -48,6 +49,11 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         if obj is not None:
             readonly_fields.append("teacher_id")
         return readonly_fields
+
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.teacher_id:
+            obj.teacher_id = generate_teacher_id(teacher_email=obj.teacher_email)
+        super().save_model(request, obj, form, change)
 
     def get_urls(self):
         urls = super().get_urls()
