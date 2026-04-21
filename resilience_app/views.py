@@ -5,6 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 
@@ -25,10 +26,6 @@ from .recommendation_service import RecommendationService
 from .scoring import compute_profile
 
 logger = logging.getLogger(__name__)
-
-
-def _hash_email(email: str) -> str:
-    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:16]
 
 
 def index(request):
@@ -95,7 +92,7 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: RecommendationService = Provide[ResilienceContainer.recommendation_service],
+        recommendation_service: IRecommendationService = Provide[ResilienceContainer.recommendation_service],
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -120,8 +117,6 @@ class AnalysisFormView(View):
 
         form = AnalysisRequestForm(request.POST, initial_teacher_id=teacher_profile.teacher_id)
         if not form.is_valid():
-            print("FORM ERRORS:", form.errors)
-            print("NON-FIELD ERRORS:", form.non_field_errors())
             return self._render(request, teacher_profile, form)
 
         scores = {key: form.get_scores(key) for key in FACTORS}
@@ -302,7 +297,20 @@ class TeacherInfoSheetView(View):
         teacher_profile = _get_active_teacher(request)
         if teacher_profile:
             return redirect("analysis_form")
-        return render(request, self.template_name)
+
+        teacher_id = request.GET.get("teacher_id", "").strip()
+        continue_url = reverse("teacher_consent")
+        if teacher_id:
+            continue_url = f"{continue_url}?teacher_id={teacher_id}"
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "continue_url": continue_url,
+                "has_teacher_id": bool(teacher_id),
+            },
+        )
 
 
 class TeacherConsentView(View):

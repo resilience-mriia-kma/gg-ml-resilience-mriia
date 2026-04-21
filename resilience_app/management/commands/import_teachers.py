@@ -1,6 +1,7 @@
 import csv
 from django.core.management.base import BaseCommand
-from resilience_app.models import ConsentFormInvitation
+from resilience_app.models import ConsentFormInvitation, TeacherProfile
+from resilience_app.teacher_ids import generate_teacher_id, normalize_teacher_email
 
 
 class Command(BaseCommand):
@@ -10,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "csv_file",
             type=str,
-            help="Path to CSV file with columns: teacher_id, teacher_email, full_name",
+            help="Path to CSV file with columns: teacher_email, full_name, optional teacher_id",
         )
         parser.add_argument(
             "--skip-duplicates",
@@ -32,18 +33,28 @@ class Command(BaseCommand):
 
                 for row_num, row in enumerate(reader, start=2):  # start=2 (header is 1)
                     try:
-                        teacher_id = row.get("teacher_id", "").strip()
-                        teacher_email = row.get("teacher_email", "").strip()
+                        teacher_email = normalize_teacher_email(row.get("teacher_email", ""))
+                        teacher_id = row.get("teacher_id", "").strip() or generate_teacher_id(
+                            teacher_email=teacher_email
+                        )
                         full_name = row.get("full_name", "").strip()
 
-                        if not all([teacher_id, teacher_email]):
+                        if not teacher_email:
                             self.stdout.write(
                                 self.style.WARNING(
-                                    f"Row {row_num}: Missing teacher_id or teacher_email, skipping"
+                                    f"Row {row_num}: Missing teacher_email, skipping"
                                 )
                             )
                             error_count += 1
                             continue
+
+                        TeacherProfile.objects.get_or_create(
+                            teacher_id=teacher_id,
+                            defaults={
+                                "teacher_email": teacher_email,
+                                "full_name": full_name or teacher_id,
+                            },
+                        )
 
                         # Check if already exists
                         if ConsentFormInvitation.objects.filter(

@@ -9,9 +9,8 @@ Usage:
 import logging
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
-from ...models import ConsentFormInvitation
+from ...models import ConsentFormInvitation, TeacherProfile
 from ...notifications import NotificationService, queue_consent_form_notification
 
 logger = logging.getLogger(__name__)
@@ -56,8 +55,25 @@ class Command(BaseCommand):
 
         for invitation in invitations:
             try:
+                teacher_profile, _ = TeacherProfile.objects.get_or_create(
+                    teacher_id=invitation.teacher_id,
+                    defaults={
+                        "teacher_email": invitation.teacher_email,
+                        "full_name": invitation.full_name or invitation.teacher_id,
+                    },
+                )
+                updated_fields = []
+                if teacher_profile.teacher_email != invitation.teacher_email:
+                    teacher_profile.teacher_email = invitation.teacher_email
+                    updated_fields.append("teacher_email")
+                if invitation.full_name and teacher_profile.full_name != invitation.full_name:
+                    teacher_profile.full_name = invitation.full_name
+                    updated_fields.append("full_name")
+                if updated_fields:
+                    teacher_profile.save(update_fields=[*updated_fields, "updated_at"])
+
                 notification = queue_consent_form_notification(
-                    teacher_email=invitation.teacher_email,
+                    teacher_profile=teacher_profile,
                 )
 
                 service.send(notification)

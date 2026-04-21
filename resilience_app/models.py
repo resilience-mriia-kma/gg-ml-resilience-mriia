@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from .teacher_ids import generate_teacher_id, normalize_teacher_email
+
 
 class TeacherProfile(models.Model):
     class FeedbackStatus(models.TextChoices):
