@@ -108,10 +108,6 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {name} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
         "simple": {
             "format": "{levelname} {name}: {message}",
             "style": "{",
@@ -123,33 +119,25 @@ LOGGING = {
             "formatter": "simple",
             "level": "INFO",
         },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": f"{BASE_DIR}/logs/django.log",
-            "maxBytes": 10485760,  # 10MB
-            "backupCount": 5,
-            "formatter": "verbose",
-            "level": "INFO",
-        },
     },
     "loggers": {
         "django": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
         "resilience_app": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
         "rag_pipeline": {
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
         },
         "": {  # Root logger
-            "handlers": ["console", "file"],
+            "handlers": ["console"],
             "level": "WARNING",
         },
     },
