@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
-from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
+from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, GENDER_CHOICES, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
@@ -24,7 +24,16 @@ def index(request):
     return JsonResponse({"status": "ok", "message": "ml-resilience-mriia"})
 
 
-def _get_active_teacher(request):
+def _restore_teacher_session(request, teacher_profile):
+    request.session["teacher_profile_id"] = teacher_profile.pk
+    request.session["teacher_id"] = teacher_profile.teacher_id
+    request.session["teacher_full_name"] = teacher_profile.full_name
+    if teacher_profile.teacher_email:
+        request.session["teacher_email"] = teacher_profile.teacher_email
+    request.session.modified = True
+
+
+def _get_teacher_from_session(request):
     teacher_profile_id = request.session.get("teacher_profile_id")
     if not teacher_profile_id:
         return None
@@ -35,13 +44,28 @@ def _get_active_teacher(request):
         return None
 
 
-def _restore_teacher_session(request, teacher_profile):
-    request.session["teacher_profile_id"] = teacher_profile.pk
-    request.session["teacher_id"] = teacher_profile.teacher_id
-    request.session["teacher_full_name"] = teacher_profile.full_name
-    if teacher_profile.teacher_email:
-        request.session["teacher_email"] = teacher_profile.teacher_email
-    request.session.modified = True
+def _get_teacher_from_query(request):
+    teacher_id = request.GET.get("teacher_id", "").strip()
+    if not teacher_id:
+        return None
+
+    teacher_profile = TeacherProfile.objects.filter(
+        teacher_id=teacher_id,
+        consent_given=True,
+    ).first()
+
+    if teacher_profile:
+        _restore_teacher_session(request, teacher_profile)
+
+    return teacher_profile
+
+
+def _get_active_teacher(request):
+    teacher_profile = _get_teacher_from_session(request)
+    if teacher_profile:
+        return teacher_profile
+
+    return _get_teacher_from_query(request)
 
 
 def _feedback_should_be_offered(teacher_profile):
@@ -70,6 +94,9 @@ class AnalysisFormView(View):
         teacher_profile = _get_active_teacher(request)
         if not teacher_profile:
             return redirect("teacher_info_sheet")
+
+        if request.GET.get("continue") == "1":
+            request.session.pop("analysis_success_message", None)
 
         form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
@@ -101,7 +128,6 @@ class AnalysisFormView(View):
             recommendations=recommendations,
         )
 
-        # Send notifications immediately
         notification_service = NotificationService()
 
         report_notification = queue_report_ready_notification(analysis_request)
@@ -122,6 +148,7 @@ class AnalysisFormView(View):
 
     def _render(self, request, teacher_profile, form):
         feedback_message = request.session.pop("feedback_message", None)
+        success_message = request.session.get("analysis_success_message")
 
         return render(
             request,
@@ -133,6 +160,7 @@ class AnalysisFormView(View):
                 "id_fields": [form[name] for name in ID_FIELDS],
                 "factor_groups": self._group_factor_fields(form),
                 "feedback_message": feedback_message,
+                "success_message": success_message,
                 "show_feedback_offer": _feedback_should_be_offered(teacher_profile),
                 "completed_screenings_count": teacher_profile.completed_screenings_count,
             },
@@ -140,18 +168,23 @@ class AnalysisFormView(View):
 
     def _group_factor_fields(self, form):
         groups = []
+        display_number = 1
+
         for factor_key, factor in FACTORS.items():
             fields = []
             for item in factor["items"]:
                 field_name = f"{factor_key}_{item['id']}"
                 fields.append(
                     {
+                        "display_number": display_number,
                         "id": item["id"],
                         "text": item["text"],
                         "field": form[field_name],
                     }
                 )
+                display_number += 1
             groups.append({"label": factor["label"], "fields": fields})
+
         return groups
 
     def _get_initial_data(self, teacher_profile):
@@ -245,11 +278,16 @@ class TeacherConsentView(View):
         if teacher_profile:
             return redirect("analysis_form")
 
-        email = request.GET.get("email", "").strip()
-        teacher_id = _hash_email(email) if email else ""
+        teacher_id = request.GET.get("teacher_id", "").strip()
+        if not teacher_id:
+            return redirect("teacher_info_sheet")
 
-        if email:
-            request.session["teacher_email"] = email
+        teacher_profile = TeacherProfile.objects.filter(teacher_id=teacher_id).first()
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        if teacher_profile.teacher_email:
+            request.session["teacher_email"] = teacher_profile.teacher_email
             request.session.modified = True
 
         form = TeacherConsentForm(initial={"teacher_id": teacher_id})
@@ -258,7 +296,7 @@ class TeacherConsentView(View):
             self.template_name,
             {
                 "form": form,
-                "email_prefilled": bool(email),
+                "email_prefilled": bool(teacher_profile.teacher_email),
             },
         )
 
@@ -276,30 +314,20 @@ class TeacherConsentView(View):
 
         teacher_id = form.cleaned_data["teacher_id"]
         full_name = form.cleaned_data["full_name"]
-        teacher_email = request.session.get("teacher_email", "").strip()
 
         teacher_profile = TeacherProfile.objects.filter(teacher_id=teacher_id).first()
+        if not teacher_profile:
+            return redirect("teacher_info_sheet")
 
-        if teacher_profile and teacher_profile.consent_given:
-            teacher_profile.full_name = full_name
-            if teacher_email:
-                teacher_profile.teacher_email = teacher_email
-            teacher_profile.save(update_fields=["full_name", "teacher_email", "updated_at"])
-        else:
-            teacher_profile, _ = TeacherProfile.objects.get_or_create(
-                teacher_id=teacher_id,
-                defaults={
-                    "full_name": full_name,
-                    "teacher_email": teacher_email or None,
-                },
-            )
-            teacher_profile.full_name = full_name
-            if teacher_email:
-                teacher_profile.teacher_email = teacher_email
-            teacher_profile.consent_given = True
-            if not teacher_profile.consent_given_at:
-                teacher_profile.consent_given_at = timezone.now()
-            teacher_profile.save()
+        teacher_email = (teacher_profile.teacher_email or request.session.get("teacher_email", "")).strip()
+
+        teacher_profile.full_name = full_name
+        if teacher_email:
+            teacher_profile.teacher_email = teacher_email
+        teacher_profile.consent_given = True
+        if not teacher_profile.consent_given_at:
+            teacher_profile.consent_given_at = timezone.now()
+        teacher_profile.save()
 
         _restore_teacher_session(request, teacher_profile)
 
@@ -430,9 +458,14 @@ class AnalysisProcessingView(View):
         if not teacher_profile or analysis_request.teacher_profile != teacher_profile:
             return redirect("teacher_info_sheet")
 
-        from .constants import GENDER_CHOICES
+        gender_display = dict(GENDER_CHOICES).get(
+            analysis_request.student_gender,
+            analysis_request.student_gender,
+        )
 
-        gender_display = dict(GENDER_CHOICES).get(analysis_request.student_gender, analysis_request.student_gender)
+        request.session["analysis_success_message"] = (
+            "Відповіді успішно зафіксовано. RAG-звіт буде надіслано на електронну пошту."
+        )
 
         return render(
             request,

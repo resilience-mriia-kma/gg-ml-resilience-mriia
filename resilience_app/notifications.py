@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 from urllib.parse import urlencode
@@ -10,9 +11,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .constants import FACTORS
-from .models import AnalysisRequest, Notification
+from .models import AnalysisRequest, Notification, TeacherProfile
 
 logger = logging.getLogger(__name__)
+
+
+def _hash_email(email: str) -> str:
+    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:16]
 
 
 def enqueue_notification(
@@ -50,15 +55,30 @@ def queue_consent_form_notification(
     *,
     teacher_email: str,
 ) -> Notification:
+    normalized_email = teacher_email.strip().lower()
+    teacher_id = _hash_email(normalized_email)
+
+    TeacherProfile.objects.get_or_create(
+        teacher_id=teacher_id,
+        defaults={
+            "teacher_email": normalized_email,
+        },
+    )
+
+    TeacherProfile.objects.filter(teacher_id=teacher_id).update(
+        teacher_email=normalized_email,
+    )
+
     context = {
-        "teacher_email": teacher_email,
+        "teacher_id": teacher_id,
+        "teacher_email": normalized_email,
     }
 
-    dedupe_key = f"consent_form:{teacher_email}"
+    dedupe_key = f"consent_form:{teacher_id}"
 
     return enqueue_notification(
         notification_type=Notification.NotificationType.CONSENT_FORM,
-        recipient_email=teacher_email,
+        recipient_email=normalized_email,
         subject="Згода та форма оцінювання резильєнтності",
         context=context,
         attachment_path=settings.CONSENT_DOCUMENT_PATH,
@@ -72,7 +92,7 @@ def queue_report_ready_notification(
     if not analysis_request.teacher_email or not analysis_request.teacher_email.strip():
         logger.warning(
             "Skipping report notification for analysis_request %s - no email address",
-            analysis_request.pk
+            analysis_request.pk,
         )
         return None
 
@@ -80,7 +100,11 @@ def queue_report_ready_notification(
         notification_type=Notification.NotificationType.REPORT_READY,
         recipient_email=analysis_request.teacher_email,
         subject=f"Готовий звіт для учня {analysis_request.student_id}",
-        context={"analysis_request_id": analysis_request.pk},
+        context={
+            "analysis_request_id": analysis_request.pk,
+            "teacher_id": analysis_request.teacher_id,
+            "teacher_email": analysis_request.teacher_email,
+        },
         analysis_request=analysis_request,
         dedupe_key=f"report_ready:{analysis_request.pk}",
     )
@@ -93,7 +117,7 @@ def queue_feedback_request_if_needed(
         return None
 
     completed_forms = AnalysisRequest.objects.filter(
-        teacher_email=analysis_request.teacher_email,
+        teacher_id=analysis_request.teacher_id,
     ).count()
 
     if completed_forms % 10 != 0:
@@ -104,11 +128,12 @@ def queue_feedback_request_if_needed(
         recipient_email=analysis_request.teacher_email,
         subject="Поділіться коротким фідбеком про систему",
         context={
+            "teacher_id": analysis_request.teacher_id,
             "teacher_email": analysis_request.teacher_email,
             "forms_completed": completed_forms,
         },
         analysis_request=analysis_request,
-        dedupe_key=f"feedback_request:{analysis_request.teacher_email}:{completed_forms}",
+        dedupe_key=f"feedback_request:{analysis_request.teacher_id}:{completed_forms}",
     )
 
 
@@ -135,9 +160,10 @@ class NotificationService:
 
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
+
         consent_url = self._absolute_url(
             reverse("teacher_consent"),
-            query_params={"email": context["teacher_email"]},
+            query_params={"teacher_id": context["teacher_id"]},
         )
 
         body = (
@@ -201,8 +227,10 @@ class NotificationService:
 
     def _send_feedback_request(self, notification: Notification) -> None:
         context = notification.context
+
         feedback_url = self._absolute_url(
             reverse("teacher_feedback_form"),
+            query_params={"teacher_id": context["teacher_id"]},
         )
 
         body = (

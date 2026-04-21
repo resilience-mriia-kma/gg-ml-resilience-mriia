@@ -5,19 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поінформована згода</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; line-height: 1.55; }
-        h1 { font-size: 1.6rem; margin-bottom: 16px; }
-        p { margin: 10px 0; }
-        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-        .field label { font-weight: 600; font-size: 0.95rem; }
-        .field input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
-        .checkbox-field { margin: 18px 0; }
-        .error { color: #dc2626; font-size: 0.85rem; margin-top: 4px; }
-        button { margin-top: 16px; padding: 10px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-        button:hover { background: #1d4ed8; }
-        .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 18px 0; }
-        .success { padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; margin: 24px 0; }
-        .button-link { text-decoration: none; }
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 760px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #111827;
+            line-height: 1.55;
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin-bottom: 16px;
+        }
+        p {
+            margin: 10px 0;
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .field label {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .field input {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        .checkbox-field {
+            margin: 18px 0;
+        }
+        .error {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        button {
+            margin-top: 16px;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .note {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 14px;
+            margin: 18px 0;
+        }
+        .success {
+            padding: 16px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            color: #166534;
+            margin: 24px 0;
+        }
+        .button-link {
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -27,6 +84,7 @@
     <div class="success">
         <p><strong>Вашу згоду зафіксовано. Дякуємо!</strong></p>
     </div>
+
     <a class="button-link" href="{% url 'analysis_form' %}">
         <button type="button">Перейти до опитувальника</button>
     </a>
@@ -40,7 +98,6 @@
 
     <form method="post">
         {% csrf_token %}
-
         {{ form.teacher_id }}
 
         <div class="field">
