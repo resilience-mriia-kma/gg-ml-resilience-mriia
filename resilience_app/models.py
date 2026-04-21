@@ -26,12 +26,6 @@ class TeacherProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def save(self, *args, **kwargs):
-        self.teacher_email = normalize_teacher_email(self.teacher_email) or None
-        if not self.teacher_id:
-            self.teacher_id = generate_teacher_id(teacher_email=self.teacher_email)
-        super().save(*args, **kwargs)
-
     class Meta:
         verbose_name = "Teacher Profile"
         verbose_name_plural = "Teacher Profiles"
