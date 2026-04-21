@@ -3,7 +3,9 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
+from resilience_app.models import TeacherProfile
 from resilience_app.notifications import NotificationService, queue_consent_form_notification
+from resilience_app.teacher_ids import generate_teacher_id, normalize_teacher_email
 
 
 class Command(BaseCommand):
@@ -60,7 +62,7 @@ class Command(BaseCommand):
         self.show_summary(notifications_created, notifications_sent, errors, dry_run, send_now)
 
     def process_row(self, row, row_num, dry_run, send_now):
-        teacher_email = row["teacher_email"].strip()
+        teacher_email = normalize_teacher_email(row["teacher_email"])
 
         if not teacher_email:
             raise ValueError("teacher_email is required")
@@ -69,8 +71,20 @@ class Command(BaseCommand):
             self.stdout.write(f"  Would send consent email to: {teacher_email}")
             return
 
+        teacher_id = generate_teacher_id(teacher_email=teacher_email)
+        teacher_profile, _ = TeacherProfile.objects.get_or_create(
+            teacher_id=teacher_id,
+            defaults={
+                "teacher_email": teacher_email,
+                "full_name": teacher_id,
+            },
+        )
+        if teacher_profile.teacher_email != teacher_email:
+            teacher_profile.teacher_email = teacher_email
+            teacher_profile.save(update_fields=["teacher_email", "updated_at"])
+
         notification = queue_consent_form_notification(
-            teacher_email=teacher_email,
+            teacher_profile=teacher_profile,
         )
 
         self.stdout.write(f"  Queued consent notification for: {teacher_email}")

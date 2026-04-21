@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 
@@ -267,7 +268,20 @@ class TeacherInfoSheetView(View):
         teacher_profile = _get_active_teacher(request)
         if teacher_profile:
             return redirect("analysis_form")
-        return render(request, self.template_name)
+
+        teacher_id = request.GET.get("teacher_id", "").strip()
+        continue_url = reverse("teacher_consent")
+        if teacher_id:
+            continue_url = f"{continue_url}?teacher_id={teacher_id}"
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "continue_url": continue_url,
+                "has_teacher_id": bool(teacher_id),
+            },
+        )
 
 
 class TeacherConsentView(View):

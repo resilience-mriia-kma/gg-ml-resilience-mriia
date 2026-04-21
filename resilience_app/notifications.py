@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 from pathlib import Path
 from urllib.parse import urlencode
@@ -12,12 +11,9 @@ from django.utils import timezone
 
 from .constants import FACTORS
 from .models import AnalysisRequest, Notification, TeacherProfile
+from .teacher_ids import normalize_teacher_email
 
 logger = logging.getLogger(__name__)
-
-
-def _hash_email(email: str) -> str:
-    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:16]
 
 
 def enqueue_notification(
@@ -53,28 +49,18 @@ def enqueue_notification(
 
 def queue_consent_form_notification(
     *,
-    teacher_email: str,
+    teacher_profile: TeacherProfile,
 ) -> Notification:
-    normalized_email = teacher_email.strip().lower()
-    teacher_id = _hash_email(normalized_email)
-
-    TeacherProfile.objects.get_or_create(
-        teacher_id=teacher_id,
-        defaults={
-            "teacher_email": normalized_email,
-        },
-    )
-
-    TeacherProfile.objects.filter(teacher_id=teacher_id).update(
-        teacher_email=normalized_email,
-    )
+    normalized_email = normalize_teacher_email(teacher_profile.teacher_email)
+    if not normalized_email:
+        raise ValueError("Teacher profile must have an email address")
 
     context = {
-        "teacher_id": teacher_id,
+        "teacher_id": teacher_profile.teacher_id,
         "teacher_email": normalized_email,
     }
 
-    dedupe_key = f"consent_form:{teacher_id}"
+    dedupe_key = f"consent_form:{teacher_profile.teacher_id}"
 
     return enqueue_notification(
         notification_type=Notification.NotificationType.CONSENT_FORM,

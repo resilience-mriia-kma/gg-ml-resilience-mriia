@@ -16,6 +16,7 @@ from .models import (
     TeacherProfile,
 )
 from .notifications import NotificationService, queue_consent_form_notification
+from .teacher_ids import generate_teacher_id, normalize_teacher_email
 
 
 @admin.register(TeacherProfile)
@@ -35,6 +36,18 @@ class TeacherProfileAdmin(admin.ModelAdmin):
     list_filter = ("consent_given", "feedback_status", "created_at")
     readonly_fields = ("created_at", "updated_at", "consent_given_at")
     actions = ["send_form_action"]
+
+    def get_fields(self, request, obj=None):
+        fields = list(super().get_fields(request, obj))
+        if obj is None:
+            return [field for field in fields if field != "teacher_id"]
+        return fields
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            readonly_fields.append("teacher_id")
+        return readonly_fields
 
     def get_urls(self):
         urls = super().get_urls()
@@ -66,13 +79,11 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
                 for row_num, row in enumerate(reader, start=2):
                     try:
-                        teacher_id = row.get("teacher_id", "").strip()
+                        teacher_email = normalize_teacher_email(row.get("teacher_email", ""))
+                        teacher_id = row.get("teacher_id", "").strip() or generate_teacher_id(
+                            teacher_email=teacher_email
+                        )
                         full_name = row.get("full_name", "").strip()
-                        teacher_email = row.get("teacher_email", "").strip()
-
-                        if not teacher_id:
-                            errors.append(f"Row {row_num}: missing teacher_id")
-                            continue
 
                         profile, created = TeacherProfile.objects.get_or_create(
                             teacher_id=teacher_id,
@@ -157,7 +168,7 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             teacher.save(update_fields=["teacher_email"])
 
         notification = queue_consent_form_notification(
-            teacher_email=email,
+            teacher_profile=teacher,
         )
         NotificationService().send(notification)
 

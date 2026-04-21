@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from .teacher_ids import generate_teacher_id, normalize_teacher_email
+
 
 class TeacherProfile(models.Model):
     class FeedbackStatus(models.TextChoices):
@@ -23,6 +25,12 @@ class TeacherProfile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.teacher_email = normalize_teacher_email(self.teacher_email) or None
+        if not self.teacher_id:
+            self.teacher_id = generate_teacher_id(teacher_email=self.teacher_email)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.teacher_id} - {self.full_name}"
