@@ -36,6 +36,12 @@
 
     {% if success_message %}
     <div class="success">{{ success_message }}</div>
+
+    <div class="top-actions">
+        <a class="button-link" href="{% url 'analysis_form' %}">
+            <button type="button">Продовжити</button>
+        </a>
+    </div>
     {% endif %}
 
     {% if feedback_message %}
@@ -61,6 +67,7 @@
     </div>
     {% endif %}
 
+    {% if not success_message %}
     <div class="note">
         <p>
             Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
@@ -105,7 +112,9 @@
 
         <button type="submit">Надіслати опитувальник</button>
     </form>
+    {% endif %}
 
+    {% if not success_message %}
     <script>
         (function () {
             const form = document.getElementById("analysis-form");
@@ -128,5 +137,6 @@
             });
         })();
     </script>
+    {% endif %}
 </body>
 </html>

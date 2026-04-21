@@ -1,6 +1,7 @@
 import hashlib
 
 from dependency_injector.wiring import Provide, inject
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -32,6 +33,15 @@ def _get_active_teacher(request):
         return TeacherProfile.objects.get(id=teacher_profile_id, consent_given=True)
     except TeacherProfile.DoesNotExist:
         return None
+
+
+def _restore_teacher_session(request, teacher_profile):
+    request.session["teacher_profile_id"] = teacher_profile.pk
+    request.session["teacher_id"] = teacher_profile.teacher_id
+    request.session["teacher_full_name"] = teacher_profile.full_name
+    if teacher_profile.teacher_email:
+        request.session["teacher_email"] = teacher_profile.teacher_email
+    request.session.modified = True
 
 
 def _feedback_should_be_offered(teacher_profile):
@@ -92,14 +102,14 @@ class AnalysisFormView(View):
         queue_report_ready_notification(analysis_request)
         queue_feedback_request_if_needed(analysis_request)
 
-        from django.db.models import F
         TeacherProfile.objects.filter(pk=teacher_profile.pk).update(
             completed_screenings_count=F("completed_screenings_count") + 1
         )
         teacher_profile.refresh_from_db()
+        _restore_teacher_session(request, teacher_profile)
 
         request.session["analysis_success_message"] = (
-            "Опитувальник успішно збережено. Ви можете одразу заповнити форму для наступного учня."
+            "Відповіді успішно зафіксовано. RAG-звіт буде надіслано на електронну пошту."
         )
 
         fresh_form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
@@ -237,48 +247,73 @@ class TeacherConsentView(View):
         if teacher_profile:
             return redirect("analysis_form")
 
-        email = request.GET.get("email", "")
+        email = request.GET.get("email", "").strip()
         teacher_id = _hash_email(email) if email else ""
+
+        if email:
+            request.session["teacher_email"] = email
+            request.session.modified = True
+
         form = TeacherConsentForm(initial={"teacher_id": teacher_id})
-        return render(request, self.template_name, {
-            "form": form,
-            "email_prefilled": bool(email),
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "email_prefilled": bool(email),
+            },
+        )
 
     def post(self, request):
         form = TeacherConsentForm(request.POST)
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form, "email_prefilled": False})
+            return render(
+                request,
+                self.template_name,
+                {
+                    "form": form,
+                    "email_prefilled": False,
+                },
+            )
 
         teacher_id = form.cleaned_data["teacher_id"]
         full_name = form.cleaned_data["full_name"]
+        teacher_email = request.session.get("teacher_email", "").strip()
 
         teacher_profile = TeacherProfile.objects.filter(teacher_id=teacher_id).first()
 
         if teacher_profile and teacher_profile.consent_given:
             teacher_profile.full_name = full_name
-            teacher_profile.save(update_fields=["full_name", "updated_at"])
+            if teacher_email:
+                teacher_profile.teacher_email = teacher_email
+            teacher_profile.save(update_fields=["full_name", "teacher_email", "updated_at"])
         else:
             teacher_profile, _ = TeacherProfile.objects.get_or_create(
                 teacher_id=teacher_id,
-                defaults={"full_name": full_name},
+                defaults={
+                    "full_name": full_name,
+                    "teacher_email": teacher_email or None,
+                },
             )
             teacher_profile.full_name = full_name
+            if teacher_email:
+                teacher_profile.teacher_email = teacher_email
             teacher_profile.consent_given = True
             if not teacher_profile.consent_given_at:
                 teacher_profile.consent_given_at = timezone.now()
             teacher_profile.save()
 
-        request.session["teacher_profile_id"] = teacher_profile.pk
-        request.session["teacher_id"] = teacher_profile.teacher_id
-        request.session["teacher_full_name"] = teacher_profile.full_name
-        request.session.modified = True
+        _restore_teacher_session(request, teacher_profile)
 
-        return render(request, self.template_name, {
-            "form": form,
-            "email_prefilled": True,
-            "consent_success": True,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "email_prefilled": bool(teacher_email),
+                "consent_success": True,
+            },
+        )
 
 
 class TeacherFeedbackDeclineView(View):
