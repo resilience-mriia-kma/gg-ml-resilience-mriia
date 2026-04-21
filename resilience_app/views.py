@@ -71,9 +71,6 @@ class AnalysisFormView(View):
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
-        if request.GET.get("continue") == "1":
-            request.session.pop("analysis_success_message", None)
-
         form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
 
@@ -113,14 +110,9 @@ class AnalysisFormView(View):
         teacher_profile.refresh_from_db()
         _restore_teacher_session(request, teacher_profile)
 
-        request.session["analysis_success_message"] = (
-            "Відповіді успішно зафіксовано. RAG-звіт буде надіслано на електронну пошту."
-        )
+        return redirect("analysis_processing", pk=analysis_request.pk)
 
-        return redirect("analysis_form")
-
-    def _render(self, request, teacher_profile, form, *, success=False):
-        success_message = request.session.get("analysis_success_message")
+    def _render(self, request, teacher_profile, form):
         feedback_message = request.session.pop("feedback_message", None)
 
         return render(
@@ -132,8 +124,6 @@ class AnalysisFormView(View):
                 "teacher_full_name": teacher_profile.full_name,
                 "id_fields": [form[name] for name in ID_FIELDS],
                 "factor_groups": self._group_factor_fields(form),
-                "success": success,
-                "success_message": success_message,
                 "feedback_message": feedback_message,
                 "show_feedback_offer": _feedback_should_be_offered(teacher_profile),
                 "completed_screenings_count": teacher_profile.completed_screenings_count,
@@ -424,3 +414,29 @@ class TeacherFeedbackFormView(View):
             for field_name, value in section_data.items():
                 initial[field_name] = value
         return initial
+
+
+class AnalysisProcessingView(View):
+    template_name = "resilience_app/analysis_processing.html"
+
+    def get(self, request, pk: int):
+        analysis_request = get_object_or_404(AnalysisRequest, pk=pk)
+        teacher_profile = _get_active_teacher(request)
+
+        if not teacher_profile or analysis_request.teacher_profile != teacher_profile:
+            return redirect("teacher_info_sheet")
+
+        from .constants import GENDER_CHOICES
+        gender_display = dict(GENDER_CHOICES).get(analysis_request.student_gender, analysis_request.student_gender)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "analysis_request": analysis_request,
+                "student_id": analysis_request.student_id,
+                "student_age": analysis_request.student_age,
+                "student_gender_display": gender_display,
+                "teacher_email": analysis_request.teacher_email,
+            },
+        )

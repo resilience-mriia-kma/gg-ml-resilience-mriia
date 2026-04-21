@@ -112,15 +112,6 @@
     <p><strong>Педагог:</strong> {{ teacher_full_name }}</p>
     <p><strong>Кількість завершених оцінювань:</strong> {{ completed_screenings_count }}</p>
 
-    {% if success_message %}
-    <div class="success">{{ success_message }}</div>
-
-    <div class="top-actions">
-        <a class="button-link" href="{% url 'analysis_form' %}?continue=1">
-            <button type="button">Продовжити</button>
-        </a>
-    </div>
-    {% endif %}
 
     {% if feedback_message %}
     <div class="info">{{ feedback_message }}</div>
@@ -145,7 +136,6 @@
     </div>
     {% endif %}
 
-    {% if not success_message %}
     <div class="note">
         <p>
             Оцініть рівень прояву кожної характеристики вашого учня на основі доступних Вам
@@ -193,9 +183,7 @@
 
         <button type="submit" id="submit-button">Надіслати опитувальник</button>
     </form>
-    {% endif %}
 
-    {% if not success_message %}
     <script>
         (function () {
             const form = document.getElementById("analysis-form");
@@ -285,6 +273,5 @@
             });
         })();
     </script>
-    {% endif %}
 </body>
 </html>

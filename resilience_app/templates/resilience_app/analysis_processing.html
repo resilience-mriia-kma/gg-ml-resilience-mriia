@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Обробка результатів - Опитувальник резільєнтності</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #111827; text-align: center; }
+        .processing-container {
+            padding: 40px 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        h1 { font-size: 1.6rem; margin-bottom: 24px; color: #1e293b; }
+        .spinner {
+            width: 64px;
+            height: 64px;
+            border: 6px solid #e2e8f0;
+            border-top: 6px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 24px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-message {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            color: #475569;
+        }
+        .details {
+            font-size: 0.95rem;
+            color: #64748b;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-top: 16px;
+        }
+        .button:hover { background: #2563eb; }
+        .secondary-button {
+            background: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+        .secondary-button:hover { background: #eff6ff; }
+        .student-info {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="processing-container">
+        <h1>Обробка результатів опитувальника</h1>
+
+        <div class="spinner"></div>
+
+        <div class="status-message">
+            Аналіз резільєнтності в процесі...
+        </div>
+
+        <div class="student-info">
+            <strong>Учень:</strong> {{ student_id }}<br>
+            <strong>Вік:</strong> {{ student_age }} років<br>
+            <strong>Стать:</strong> {{ student_gender_display }}
+        </div>
+
+        <div class="details">
+            Ваші відповіді успішно зафіксовано та передано до системи аналізу.
+            <br><br>
+            RAG-звіт з рекомендаціями буде надіслано на електронну пошту
+            <strong>{{ teacher_email }}</strong> протягом кількох хвилин.
+        </div>
+
+        <a href="{% url 'analysis_form' %}" class="button secondary-button">
+            Повернутися до форми
+        </a>
+    </div>
+
+    <script>
+        // Auto-redirect after 8 seconds to prevent users from staying on processing screen
+        setTimeout(function() {
+            window.location.href = '{% url "analysis_form" %}';
+        }, 8000);
+    </script>
+</body>
+</html>
