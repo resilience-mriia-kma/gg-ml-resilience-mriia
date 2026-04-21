@@ -36,9 +36,6 @@
             border-radius: 4px;
             font-size: 0.95rem;
         }
-        .checkbox-field {
-            margin: 18px 0;
-        }
         .error {
             color: #dc2626;
             font-size: 0.85rem;
@@ -104,14 +101,6 @@
             {{ form.full_name.label_tag }}
             {{ form.full_name }}
             {% for error in form.full_name.errors %}
-            <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <div class="checkbox-field">
-            {{ form.consent_given }}
-            {{ form.consent_given.label_tag }}
-            {% for error in form.consent_given.errors %}
             <div class="error">{{ error }}</div>
             {% endfor %}
         </div>

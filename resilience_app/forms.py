@@ -71,7 +71,6 @@ class TeacherConsentForm(forms.Form):
         max_length=255,
         required=True,
     )
-    consent_given = forms.BooleanField(label="Так, погоджуюсь", required=True)
 
 
 class TeacherAppFeedbackForm(forms.Form):
