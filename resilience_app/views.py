@@ -71,6 +71,9 @@ class AnalysisFormView(View):
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
+        if request.GET.get("continue") == "1":
+            request.session.pop("analysis_success_message", None)
+
         form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
 
@@ -81,6 +84,8 @@ class AnalysisFormView(View):
 
         form = AnalysisRequestForm(request.POST, initial_teacher_id=teacher_profile.teacher_id)
         if not form.is_valid():
+            print("FORM ERRORS:", form.errors)
+            print("NON-FIELD ERRORS:", form.non_field_errors())
             return self._render(request, teacher_profile, form)
 
         scores = {key: form.get_scores(key) for key in FACTORS}
@@ -112,11 +117,10 @@ class AnalysisFormView(View):
             "Відповіді успішно зафіксовано. RAG-звіт буде надіслано на електронну пошту."
         )
 
-        fresh_form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
-        return self._render(request, teacher_profile, fresh_form, success=True)
+        return redirect("analysis_form")
 
     def _render(self, request, teacher_profile, form, *, success=False):
-        success_message = request.session.pop("analysis_success_message", None)
+        success_message = request.session.get("analysis_success_message")
         feedback_message = request.session.pop("feedback_message", None)
 
         return render(
