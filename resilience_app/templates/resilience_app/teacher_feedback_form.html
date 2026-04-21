@@ -1,72 +1,192 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Форма оцінки застосунку</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #111827; line-height: 1.55; }
-        h1 { font-size: 1.6rem; margin-bottom: 16px; }
-        h2 { font-size: 1.1rem; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-        p { margin: 10px 0; }
-        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-        .field label { font-weight: 600; font-size: 0.95rem; }
-        .field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
-        .error { color: #dc2626; font-size: 0.85rem; margin-top: 4px; }
-        button { margin-top: 16px; padding: 10px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-        button:hover { background: #1d4ed8; }
-        .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 18px 0; }
-        .success { padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; margin: 24px 0; }
-        .readonly { padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1d4ed8; margin: 24px 0; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Форма оцінки застосунку</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #111827;
+      line-height: 1.55;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      margin-top: 28px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 4px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+
+    .error {
+      color: #dc2626;
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    .hint {
+      color: #4b5563;
+      font-size: 0.86rem;
+      margin-top: 2px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    button,
+    .button-link {
+      display: inline-block;
+      text-decoration: none;
+      margin-top: 16px;
+      padding: 10px 16px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover,
+    .button-link:hover {
+      background: #1d4ed8;
+    }
+
+    .button-link.secondary {
+      background: #374151;
+    }
+
+    .button-link.secondary:hover {
+      background: #1f2937;
+    }
+
+    .note {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 14px;
+      margin: 18px 0;
+    }
+
+    .success {
+      padding: 16px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      color: #166534;
+      margin: 24px 0;
+    }
+
+    .readonly {
+      padding: 16px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      color: #1d4ed8;
+      margin: 24px 0;
+    }
+  </style>
 </head>
 <body>
-    <h1>Форма оцінки використання застосунку</h1>
+  <h1>Форма оцінки використання застосунку</h1>
 
-    {% if success %}
+  {% if success %}
     <div class="success">
-        <p><strong>Дякуємо! Ваш фідбек успішно збережено.</strong></p>
+      <p><strong>Дякуємо! Ваш фідбек успішно збережено.</strong></p>
+      <div class="button-row">
+        <a class="button-link" href="{% url 'analysis_form' %}?continue=1">Продовжити опитування</a>
+      </div>
     </div>
-    {% endif %}
+  {% endif %}
 
-    {% if already_submitted %}
+  {% if already_submitted and not success %}
     <div class="readonly">
-        <p><strong>Ви вже заповнили цю форму.</strong></p>
+      <p><strong>Ви вже заповнили цю форму.</strong></p>
+      <div class="button-row">
+        <a class="button-link" href="{% url 'analysis_form' %}?continue=1">Продовжити опитування</a>
+      </div>
     </div>
-    {% endif %}
+  {% endif %}
 
-    {% if not already_submitted %}
+  {% if not already_submitted %}
     <div class="note">
-        <p>Будь ласка, оцініть використання застосунку та залиште короткий коментар.</p>
+      <p>Будь ласка, оцініть використання застосунку та залиште короткий коментар.</p>
+      <p><strong>Підказка для шкали 1–5:</strong> 1 — погано / зовсім ні, 5 — добре / повністю так.</p>
     </div>
 
     <form method="post">
-        {% csrf_token %}
+      {% csrf_token %}
 
-        {% for group in feedback_groups %}
+      {% for group in feedback_groups %}
         <h2>{{ group.label }}</h2>
 
         {% for item in group.fields %}
-        <div class="field">
+          <div class="field">
             <label for="{{ item.field.id_for_label }}">{{ item.text }}</label>
             {{ item.field }}
+
+            {% if item.help_text %}
+              <div class="hint">{{ item.help_text }}</div>
+            {% endif %}
+
             {% for error in item.field.errors %}
-            <div class="error">{{ error }}</div>
+              <div class="error">{{ error }}</div>
             {% endfor %}
-        </div>
+          </div>
         {% endfor %}
+      {% endfor %}
+
+      <div class="field">
+        {{ form.comments.label_tag }}
+        {{ form.comments }}
+
+        {% for error in form.comments.errors %}
+          <div class="error">{{ error }}</div>
         {% endfor %}
+      </div>
 
-        <div class="field">
-            {{ form.comments.label_tag }}
-            {{ form.comments }}
-            {% for error in form.comments.errors %}
-            <div class="error">{{ error }}</div>
-            {% endfor %}
-        </div>
-
+      <div class="button-row">
         <button type="submit">Надіслати фідбек</button>
+        <a class="button-link secondary" href="{% url 'analysis_form' %}?continue=1">Продовжити опитування без надсилання</a>
+      </div>
     </form>
-    {% endif %}
+  {% endif %}
 </body>
 </html>

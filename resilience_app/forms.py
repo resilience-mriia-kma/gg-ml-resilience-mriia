@@ -52,7 +52,9 @@ class TeacherFeedbackForm(forms.Form):
             ("5", "5 - very useful"),
         ],
         widget=forms.RadioSelect,
+        help_text="1 - not useful, 5 - very useful.",
     )
+
     comments = forms.CharField(
         label="Comments",
         required=False,
@@ -88,12 +90,14 @@ class TeacherAppFeedbackForm(forms.Form):
                 name = field_def["name"]
                 field_type = field_def["type"]
                 label = field_def["label"]
+                help_text = field_def.get("help_text", "")
 
                 if field_type == "choice":
                     self.fields[name] = forms.ChoiceField(
                         label=label,
                         choices=field_def["choices"],
                         required=False,
+                        help_text=help_text,
                     )
                 elif field_type == "multiple_choice":
                     self.fields[name] = forms.MultipleChoiceField(
@@ -101,21 +105,28 @@ class TeacherAppFeedbackForm(forms.Form):
                         choices=field_def["choices"],
                         required=False,
                         widget=forms.CheckboxSelectMultiple,
+                        help_text=help_text,
                     )
                 elif field_type == "text":
-                    self.fields[name] = forms.CharField(label=label, required=False)
+                    self.fields[name] = forms.CharField(
+                        label=label,
+                        required=False,
+                        help_text=help_text,
+                    )
                 elif field_type == "integer":
                     self.fields[name] = forms.IntegerField(
                         label=label,
                         required=False,
                         min_value=1,
                         max_value=120,
+                        help_text=help_text,
                     )
                 elif field_type == "textarea":
                     self.fields[name] = forms.CharField(
                         label=label,
                         required=False,
                         widget=forms.Textarea(attrs={"rows": 4}),
+                        help_text=help_text,
                     )
 
     def get_feedback_responses(self):

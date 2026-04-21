@@ -85,9 +85,12 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
                 for row_num, row in enumerate(reader, start=2):
                     try:
-                        teacher_email = normalize_teacher_email(row.get("teacher_email", ""))
-                        teacher_id = row.get("teacher_id", "").strip() or generate_teacher_id(
-                            teacher_email=teacher_email
+                        teacher_email = normalize_teacher_email(
+                            row.get("teacher_email", "")
+                        )
+                        teacher_id = (
+                            row.get("teacher_id", "").strip()
+                            or generate_teacher_id(teacher_email=teacher_email)
                         )
                         full_name = row.get("full_name", "").strip()
 
@@ -117,19 +120,29 @@ class TeacherProfileAdmin(admin.ModelAdmin):
                                     "full_name": full_name,
                                 },
                             )
+
                     except Exception as exc:
                         errors.append(f"Row {row_num}: {exc}")
 
                 summary = f"Created: {created_count}, updated: {updated_count}"
                 level = messages.SUCCESS
+
                 if errors:
                     summary += f". Errors ({len(errors)}): {'; '.join(errors[:3])}"
                     level = messages.WARNING
-                self.message_user(request, summary, level=level)
-            except Exception as exc:
-                self.message_user(request, f"Error reading file: {exc}", level=messages.ERROR)
 
-            return HttpResponseRedirect(reverse("admin:resilience_app_teacherprofile_changelist"))
+                self.message_user(request, summary, level=level)
+
+            except Exception as exc:
+                self.message_user(
+                    request,
+                    f"Error reading file: {exc}",
+                    level=messages.ERROR,
+                )
+
+            return HttpResponseRedirect(
+                reverse("admin:resilience_app_teacherprofile_changelist")
+            )
 
         return render(
             request,
@@ -142,7 +155,9 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
-        extra_context["upload_csv_url"] = reverse("admin:resilience_app_teacherprofile_upload_csv")
+        extra_context["upload_csv_url"] = reverse(
+            "admin:resilience_app_teacherprofile_upload_csv"
+        )
         return super().changelist_view(request, extra_context)
 
     def _send_form_for_teacher(self, teacher):
@@ -160,12 +175,15 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             raise ValueError("No email available")
 
         updated_fields = []
+
         if invitation.teacher_email != email:
             invitation.teacher_email = email
             updated_fields.append("teacher_email")
+
         if invitation.full_name != teacher.full_name:
             invitation.full_name = teacher.full_name
             updated_fields.append("full_name")
+
         if updated_fields:
             invitation.save(update_fields=updated_fields)
 
@@ -173,13 +191,16 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             teacher.teacher_email = email
             teacher.save(update_fields=["teacher_email"])
 
-        # Send teacher info sheet notification instead of consent form
         notification = self._queue_teacher_info_notification(teacher)
         NotificationService().send(notification)
 
         invitation.refresh_from_db()
+
         if notification.status == Notification.Status.SENT:
-            if invitation.status != ConsentFormInvitation.Status.SENT or not invitation.invitation_sent:
+            if (
+                invitation.status != ConsentFormInvitation.Status.SENT
+                or not invitation.invitation_sent
+            ):
                 invitation.mark_sent()
             return
 
@@ -187,10 +208,13 @@ class TeacherProfileAdmin(admin.ModelAdmin):
         invitation.mark_failed(error_message)
 
     def _queue_teacher_info_notification(self, teacher):
-        teacher_info_url = f"{settings.APP_BASE_URL}{reverse('teacher_info_sheet')}?teacher_id={teacher.teacher_id}"
+        teacher_info_url = (
+            f"{settings.APP_BASE_URL}"
+            f"{reverse('teacher_info_sheet')}?teacher_id={teacher.teacher_id}"
+        )
 
         notification = enqueue_notification(
-            notification_type=Notification.NotificationType.CONSENT_FORM,  # Reuse type for now
+            notification_type=Notification.NotificationType.CONSENT_FORM,
             recipient_email=teacher.teacher_email,
             subject="Запрошення до участі у дослідженні стійкості",
             context={
@@ -204,6 +228,7 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
     def send_form_view(self, request, object_id):
         teacher = get_object_or_404(TeacherProfile, pk=object_id)
+
         try:
             self._send_form_for_teacher(teacher)
             self.message_user(
@@ -218,19 +243,23 @@ class TeacherProfileAdmin(admin.ModelAdmin):
                 level=messages.ERROR,
             )
 
-        return HttpResponseRedirect(reverse("admin:resilience_app_teacherprofile_changelist"))
+        return HttpResponseRedirect(
+            reverse("admin:resilience_app_teacherprofile_changelist")
+        )
 
     def send_form_button(self, obj):
         url = reverse("admin:resilience_app_teacherprofile_send_form", args=[obj.pk])
-        has_email = (
-            bool(obj.teacher_email)
-            or ConsentFormInvitation.objects.filter(
-                teacher_id=obj.teacher_id,
-                teacher_email__gt="",
-            ).exists()
-        )
+        has_email = bool(obj.teacher_email) or ConsentFormInvitation.objects.filter(
+            teacher_id=obj.teacher_id,
+            teacher_email__gt="",
+        ).exists()
+
         if not has_email:
-            return format_html('<span style="color: #999;">{}</span>', "Send form unavailable")
+            return format_html(
+                '<span style="color: #999;">{}</span>',
+                "Send form unavailable",
+            )
+
         return format_html('<a class="button" href="{}">Send form</a>', url)
 
     send_form_button.short_description = "Actions"
@@ -253,6 +282,7 @@ class TeacherProfileAdmin(admin.ModelAdmin):
                 f"Sent {sent_count} form invitation(s).",
                 level=messages.SUCCESS,
             )
+
         if failed:
             self.message_user(
                 request,
@@ -263,7 +293,14 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
 @admin.register(ConsentFormInvitation)
 class ConsentFormInvitationAdmin(admin.ModelAdmin):
-    list_display = ("teacher_id", "teacher_email", "full_name", "status_badge", "sent_at", "created_at")
+    list_display = (
+        "teacher_id",
+        "teacher_email",
+        "full_name",
+        "status_badge",
+        "sent_at",
+        "created_at",
+    )
     search_fields = ("teacher_id", "teacher_email", "full_name")
     list_filter = ("status", "invitation_sent", "created_at")
     readonly_fields = ("created_at", "updated_at", "sent_at", "error_message")
@@ -271,7 +308,10 @@ class ConsentFormInvitationAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Teacher Info", {"fields": ("teacher_id", "teacher_email", "full_name")}),
-        ("Invitation Status", {"fields": ("status", "invitation_sent", "sent_at", "error_message")}),
+        (
+            "Invitation Status",
+            {"fields": ("status", "invitation_sent", "sent_at", "error_message")},
+        ),
         ("Metadata", {"fields": ("created_at", "updated_at")}),
     )
 
@@ -282,8 +322,10 @@ class ConsentFormInvitationAdmin(admin.ModelAdmin):
             "failed": "#dc3545",
         }
         color = colors.get(obj.status, "#6c757d")
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; '
+            'border-radius: 3px;">{}</span>',
             color,
             obj.get_status_display(),
         )
@@ -292,7 +334,10 @@ class ConsentFormInvitationAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected invitations as pending")
     def mark_as_pending(self, request, queryset):
-        count = queryset.update(status=ConsentFormInvitation.Status.PENDING, invitation_sent=False)
+        count = queryset.update(
+            status=ConsentFormInvitation.Status.PENDING,
+            invitation_sent=False,
+        )
         self.message_user(request, f"{count} invitations marked as pending.")
 
 
@@ -314,7 +359,14 @@ class AnalysisRequestAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("pk", "type", "recipient_email", "status_badge", "scheduled_at", "sent_at")
+    list_display = (
+        "pk",
+        "type",
+        "recipient_email",
+        "status_badge",
+        "scheduled_at",
+        "sent_at",
+    )
     search_fields = ("recipient_email", "subject", "dedupe_key")
     list_filter = ("type", "status", "scheduled_at", "sent_at")
     readonly_fields = ("sent_at", "error_message", "scheduled_at")
@@ -326,8 +378,10 @@ class NotificationAdmin(admin.ModelAdmin):
             "failed": "#dc3545",
         }
         color = colors.get(obj.status, "#6c757d")
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px;">{}</span>',
+            '<span style="background-color: {}; color: white; padding: 3px 10px; '
+            'border-radius: 3px;">{}</span>',
             color,
             obj.get_status_display(),
         )
@@ -337,14 +391,30 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(TeacherFeedback)
 class TeacherFeedbackAdmin(admin.ModelAdmin):
-    list_display = ("pk", "teacher_id", "teacher_email", "forms_completed", "rating", "created_at")
-    search_fields = ("teacher_id", "teacher_email")
+    list_display = (
+        "pk",
+        "teacher_id",
+        "teacher_email",
+        "forms_completed",
+        "rating",
+        "created_at",
+    )
+    search_fields = ("teacher_id", "teacher_email", "comments")
     list_filter = ("rating", "created_at")
     readonly_fields = ("created_at",)
 
 
 @admin.register(TeacherAppFeedback)
 class TeacherAppFeedbackAdmin(admin.ModelAdmin):
-    list_display = ("teacher_profile", "created_at", "updated_at")
-    search_fields = ("teacher_profile__teacher_id", "teacher_profile__full_name")
+    list_display = (
+        "teacher_profile",
+        "created_at",
+        "updated_at",
+    )
+    search_fields = (
+        "teacher_profile__teacher_id",
+        "teacher_profile__teacher_email",
+        "teacher_profile__full_name",
+        "comments",
+    )
     readonly_fields = ("created_at", "updated_at")

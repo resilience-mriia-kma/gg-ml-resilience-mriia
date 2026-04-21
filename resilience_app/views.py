@@ -20,7 +20,12 @@ from .constants import (
     TEACHER_APP_FEEDBACK_SECTIONS,
 )
 from .container import ResilienceContainer
-from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
+from .forms import (
+    AnalysisRequestForm,
+    TeacherAppFeedbackForm,
+    TeacherConsentForm,
+    TeacherFeedbackForm,
+)
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
 from .notifications import NotificationService, queue_feedback_request_if_needed
 from .scoring import compute_profile
@@ -36,8 +41,10 @@ def _restore_teacher_session(request, teacher_profile):
     request.session["teacher_profile_id"] = teacher_profile.pk
     request.session["teacher_id"] = teacher_profile.teacher_id
     request.session["teacher_full_name"] = teacher_profile.full_name
+
     if teacher_profile.teacher_email:
         request.session["teacher_email"] = teacher_profile.teacher_email
+
     request.session.modified = True
 
 
@@ -47,7 +54,10 @@ def _get_teacher_from_session(request):
         return None
 
     try:
-        return TeacherProfile.objects.get(id=teacher_profile_id, consent_given=True)
+        return TeacherProfile.objects.get(
+            id=teacher_profile_id,
+            consent_given=True,
+        )
     except TeacherProfile.DoesNotExist:
         return None
 
@@ -92,12 +102,16 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: IRecommendationService = Provide[ResilienceContainer.recommendation_service],
+        recommendation_service: IRecommendationService = Provide[
+            ResilienceContainer.recommendation_service
+        ],
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.recommendation_service = recommendation_service
-        self.async_recommendation_service = AsyncRecommendationService(recommendation_service)
+        self.async_recommendation_service = AsyncRecommendationService(
+            recommendation_service
+        )
 
     def get(self, request):
         teacher_profile = _get_active_teacher(request)
@@ -115,7 +129,10 @@ class AnalysisFormView(View):
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
-        form = AnalysisRequestForm(request.POST, initial_teacher_id=teacher_profile.teacher_id)
+        form = AnalysisRequestForm(
+            request.POST,
+            initial_teacher_id=teacher_profile.teacher_id,
+        )
         if not form.is_valid():
             return self._render(request, teacher_profile, form)
 
@@ -132,7 +149,7 @@ class AnalysisFormView(View):
             student_gender=form.cleaned_data["student_gender"],
             scores=scores,
             profile=profile,
-            recommendations="",  # Empty initially, will be filled by background task
+            recommendations="",
         )
 
         # Update teacher statistics immediately
@@ -145,9 +162,10 @@ class AnalysisFormView(View):
         # Send immediate notifications (before starting background processing)
         self._send_immediate_notifications(analysis_request)
 
-        # Start background task for recommendation generation
-        # (Report notification will be sent when recommendations are ready)
-        self.async_recommendation_service.start_background_task(analysis_request.pk, scores)
+        self.async_recommendation_service.start_background_task(
+            analysis_request.pk,
+            scores,
+        )
 
         return redirect("analysis_processing", pk=analysis_request.pk)
 
@@ -168,13 +186,17 @@ class AnalysisFormView(View):
             feedback_notification = queue_feedback_request_if_needed(analysis_request)
             if feedback_notification:
                 notification_service.send(feedback_notification)
-                logger.info(f"Feedback notification sent immediately for request {analysis_request.pk}")
+                logger.info(
+                    "Feedback notification sent immediately for request %s",
+                    analysis_request.pk,
+                )
 
-            # Future: Could add processing acknowledgment notification here
-            # e.g., "Your analysis is being processed, you'll receive an email when ready"
-
-        except Exception as e:
-            logger.exception(f"Failed to send immediate notifications for request {analysis_request.pk}: {e}")
+        except Exception as exc:
+            logger.exception(
+                "Failed to send immediate notifications for request %s: %s",
+                analysis_request.pk,
+                exc,
+            )
 
     def _render(self, request, teacher_profile, form):
         feedback_message = request.session.pop("feedback_message", None)
@@ -202,6 +224,7 @@ class AnalysisFormView(View):
 
         for factor_key, factor in FACTORS.items():
             fields = []
+
             for item in factor["items"]:
                 field_name = f"{factor_key}_{item['id']}"
                 fields.append(
@@ -213,7 +236,13 @@ class AnalysisFormView(View):
                     }
                 )
                 display_number += 1
-            groups.append({"label": factor["label"], "fields": fields})
+
+            groups.append(
+                {
+                    "label": factor["label"],
+                    "fields": fields,
+                }
+            )
 
         return groups
 
@@ -233,22 +262,34 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
-                "value": RESILIENCE_LEVEL_UKRAINIAN.get(analysis_request.profile.get(factor_key, ""), "-"),
+                "value": RESILIENCE_LEVEL_UKRAINIAN.get(
+                    analysis_request.profile.get(factor_key, ""),
+                    "-",
+                ),
             }
             for factor_key in FACTORS
         ]
 
-        recommendation_lines = [line.strip() for line in analysis_request.recommendations.splitlines() if line.strip()]
+        recommendation_lines = [
+            line.strip()
+            for line in analysis_request.recommendations.splitlines()
+            if line.strip()
+        ]
 
-        # Group sources by document title and keep the highest scoring one for each document
         unique_sources = {}
         for source in analysis_request.sources:
             doc_title = source.get("document_title", "")
-            if doc_title not in unique_sources or source.get("score", 0) > unique_sources[doc_title].get("score", 0):
+            if (
+                doc_title not in unique_sources
+                or source.get("score", 0) > unique_sources[doc_title].get("score", 0)
+            ):
                 unique_sources[doc_title] = source
 
-        # Convert back to list sorted by relevance score (highest first)
-        grouped_sources = sorted(unique_sources.values(), key=lambda x: x.get("score", 0), reverse=True)
+        grouped_sources = sorted(
+            unique_sources.values(),
+            key=lambda item: item.get("score", 0),
+            reverse=True,
+        )
 
         return render(
             request,
@@ -276,6 +317,8 @@ class TeacherFeedbackView(View):
         )
 
     def get(self, request):
+        success = request.session.pop("basic_feedback_success", False)
+
         form = TeacherFeedbackForm(
             initial={
                 "teacher_id": request.GET.get("teacher_id", ""),
@@ -283,12 +326,12 @@ class TeacherFeedbackView(View):
                 "forms_completed": request.GET.get("forms_completed", 0),
             }
         )
-        return self._render(request, form)
+        return self._render(request, form, success=success)
 
     def post(self, request):
         form = TeacherFeedbackForm(request.POST)
         if not form.is_valid():
-            return self._render(request, form)
+            return self._render(request, form, success=False)
 
         TeacherFeedback.objects.create(
             teacher_id=form.cleaned_data["teacher_id"],
@@ -298,7 +341,8 @@ class TeacherFeedbackView(View):
             comments=form.cleaned_data["comments"],
         )
 
-        return self._render(request, TeacherFeedbackForm(), success=True)
+        request.session["basic_feedback_success"] = True
+        return redirect("feedback_form")
 
 
 class TeacherInfoSheetView(View):
@@ -342,6 +386,7 @@ class TeacherConsentView(View):
             request.session.modified = True
 
         form = TeacherConsentForm(initial={"teacher_id": teacher_id})
+
         return render(
             request,
             self.template_name,
@@ -370,7 +415,10 @@ class TeacherConsentView(View):
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
-        teacher_email = (teacher_profile.teacher_email or request.session.get("teacher_email", "")).strip()
+        teacher_email = (
+            teacher_profile.teacher_email
+            or request.session.get("teacher_email", "")
+        ).strip()
 
         teacher_profile.full_name = full_name
         if teacher_email:
@@ -403,7 +451,8 @@ class TeacherFeedbackDeclineView(View):
         teacher_profile.save(update_fields=["feedback_status", "updated_at"])
 
         request.session["feedback_message"] = (
-            "Ви відмовилися від заповнення форми оцінки застосунку. Основний опитувальник залишається доступним."
+            "Ви відмовилися від заповнення форми оцінки застосунку. "
+            "Основний опитувальник залишається доступним."
         )
         return redirect("analysis_form")
 
@@ -417,7 +466,9 @@ class TeacherFeedbackFormView(View):
             return redirect("teacher_info_sheet")
 
         feedback = getattr(teacher_profile, "app_feedback", None)
-        form = TeacherAppFeedbackForm(initial=self._build_initial(feedback) if feedback else None)
+        form = TeacherAppFeedbackForm(
+            initial=self._build_initial(feedback) if feedback else None
+        )
         success = request.session.pop("feedback_success", False)
 
         return render(
@@ -444,6 +495,7 @@ class TeacherFeedbackFormView(View):
                 self.template_name,
                 {
                     "form": form,
+                    "success": False,
                     "teacher_profile": teacher_profile,
                     "feedback_groups": self._group_feedback_fields(form),
                     "already_submitted": False,
@@ -464,38 +516,45 @@ class TeacherFeedbackFormView(View):
         teacher_profile.feedback_status = TeacherProfile.FeedbackStatus.SUBMITTED
         teacher_profile.save(update_fields=["feedback_status", "updated_at"])
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "form": form,
-                "teacher_profile": teacher_profile,
-                "feedback_groups": self._group_feedback_fields(form),
-                "already_submitted": True,
-                "success": True,
-            },
-        )
+        request.session["feedback_success"] = True
+        return redirect("teacher_feedback_form")
 
     def _group_feedback_fields(self, form):
         groups = []
+
         for _, section in TEACHER_APP_FEEDBACK_SECTIONS.items():
             fields = []
+
             for field_def in section["fields"]:
+                field_name = field_def["name"]
+                bound_field = form[field_name]
+                form_field = form.fields[field_name]
+
                 fields.append(
                     {
-                        "name": field_def["name"],
+                        "name": field_name,
                         "text": field_def["label"],
-                        "field": form[field_def["name"]],
+                        "field": bound_field,
+                        "help_text": field_def.get("help_text") or form_field.help_text,
                     }
                 )
-            groups.append({"label": section["label"], "fields": fields})
+
+            groups.append(
+                {
+                    "label": section["label"],
+                    "fields": fields,
+                }
+            )
+
         return groups
 
     def _build_initial(self, feedback):
         initial = {"comments": feedback.comments}
+
         for _, section_data in feedback.responses.items():
             for field_name, value in section_data.items():
                 initial[field_name] = value
+
         return initial
 
 
@@ -515,7 +574,8 @@ class AnalysisProcessingView(View):
         )
 
         request.session["analysis_success_message"] = (
-            "Відповіді успішно зафіксовано. RAG-звіт буде надіслано на електронну пошту."
+            "Відповіді успішно зафіксовано. "
+            "RAG-звіт буде надіслано на електронну пошту."
         )
 
         return render(
