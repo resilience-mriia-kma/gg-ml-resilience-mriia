@@ -1,4 +1,3 @@
-import hashlib
 import logging
 
 from dependency_injector.wiring import Provide, inject
@@ -8,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
+
+from resilience_app.protocols import IRecommendationService
 
 from .async_recommendation_service import AsyncRecommendationService
 from .constants import (
@@ -22,7 +23,6 @@ from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
 from .notifications import NotificationService, queue_feedback_request_if_needed
-from .recommendation_service import RecommendationService
 from .scoring import compute_profile
 
 logger = logging.getLogger(__name__)
