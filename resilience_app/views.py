@@ -240,6 +240,16 @@ class AnalysisReportView(View):
 
         recommendation_lines = [line.strip() for line in analysis_request.recommendations.splitlines() if line.strip()]
 
+        # Group sources by document title and keep the highest scoring one for each document
+        unique_sources = {}
+        for source in analysis_request.sources:
+            doc_title = source.get("document_title", "")
+            if doc_title not in unique_sources or source.get("score", 0) > unique_sources[doc_title].get("score", 0):
+                unique_sources[doc_title] = source
+
+        # Convert back to list sorted by relevance score (highest first)
+        grouped_sources = sorted(unique_sources.values(), key=lambda x: x.get("score", 0), reverse=True)
+
         return render(
             request,
             self.template_name,
@@ -247,6 +257,7 @@ class AnalysisReportView(View):
                 "analysis_request": analysis_request,
                 "profile_rows": profile_rows,
                 "recommendation_lines": recommendation_lines,
+                "sources": grouped_sources,
             },
         )
 

@@ -140,6 +140,13 @@
             color: #2c3e50;
         }
 
+        .relevance-score {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            font-weight: normal;
+            margin-left: 8px;
+        }
+
         @media (max-width: 600px) {
             .info-grid {
                 grid-template-columns: 1fr;
@@ -201,14 +208,15 @@
                 {{ analysis_request.recommendations|linebreaksbr }}
             </div>
 
-            {% if analysis_request.sources %}
+            {% if sources %}
                 <h2>Джерела</h2>
                 <div class="sources">
                     <p><em>Рекомендації базуються на наступних джерелах:</em></p>
                     <ul>
-                        {% for source in analysis_request.sources %}
+                        {% for source in sources %}
                             <li>
                                 <strong>{{ source.document_title }}</strong>
+                                <span class="relevance-score">(релевантність: {{ source.score }})</span>
                             </li>
                         {% endfor %}
                     </ul>
