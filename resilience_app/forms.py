@@ -5,7 +5,7 @@ from .constants import FACTORS, GENDER_CHOICES, SCORE_CHOICES, TEACHER_APP_FEEDB
 
 class AnalysisRequestForm(forms.Form):
     teacher_id = forms.CharField(max_length=128, widget=forms.HiddenInput())
-    teacher_email = forms.EmailField(widget=forms.HiddenInput())
+    teacher_email = forms.EmailField(required=False, widget=forms.HiddenInput())
     submission_token = forms.CharField(required=False, widget=forms.HiddenInput())
     student_id = forms.CharField(max_length=128, label="ID учня")
     student_age = forms.IntegerField(min_value=1, max_value=100, label="Вік учня")
@@ -39,7 +39,7 @@ class AnalysisRequestForm(forms.Form):
 
 class TeacherFeedbackForm(forms.Form):
     teacher_id = forms.CharField(widget=forms.HiddenInput())
-    teacher_email = forms.EmailField(widget=forms.HiddenInput())
+    teacher_email = forms.EmailField(required=False, widget=forms.HiddenInput())
     forms_completed = forms.IntegerField(widget=forms.HiddenInput())
 
     rating = forms.ChoiceField(
