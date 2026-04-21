@@ -262,6 +262,7 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
+                "level": analysis_request.profile.get(factor_key, ""),
                 "value": RESILIENCE_LEVEL_UKRAINIAN.get(
                     analysis_request.profile.get(factor_key, ""),
                     "-",
