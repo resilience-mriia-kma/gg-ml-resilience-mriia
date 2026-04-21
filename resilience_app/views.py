@@ -1,6 +1,3 @@
-import hashlib
-import logging
-
 from dependency_injector.wiring import Provide, inject
 from django.db.models import F
 from django.http import JsonResponse
@@ -9,27 +6,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 
-from .async_recommendation_service import AsyncRecommendationService
-from .constants import (
-    FACTORS,
-    FEEDBACK_TRIGGER_COUNT,
-    GENDER_CHOICES,
-    ID_FIELDS,
-    RESILIENCE_LEVEL_UKRAINIAN,
-    TEACHER_APP_FEEDBACK_SECTIONS,
-)
+from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, GENDER_CHOICES, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
-from .notifications import NotificationService, queue_feedback_request_if_needed
-from .recommendation_service import RecommendationService
+from .notifications import NotificationService, queue_feedback_request_if_needed, queue_report_ready_notification
+from .protocols import IRecommendationService
 from .scoring import compute_profile
-
-logger = logging.getLogger(__name__)
-
-
-def _hash_email(email: str) -> str:
-    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:16]
 
 
 def index(request):
@@ -96,14 +79,13 @@ class AnalysisFormView(View):
     @inject
     def __init__(
         self,
-        recommendation_service: RecommendationService = Provide[ResilienceContainer.recommendation_service],
+        recommendation_service: IRecommendationService = Provide[ResilienceContainer.recommendation_service],
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.recommendation_service = recommendation_service
-        self.async_recommendation_service = AsyncRecommendationService(recommendation_service)
 
-    async def get(self, request):
+    def get(self, request):
         teacher_profile = _get_active_teacher(request)
         if not teacher_profile:
             return redirect("teacher_info_sheet")
@@ -114,21 +96,27 @@ class AnalysisFormView(View):
         form = AnalysisRequestForm(initial=self._get_initial_data(teacher_profile))
         return self._render(request, teacher_profile, form)
 
-    async def post(self, request):
+    def post(self, request):
         teacher_profile = _get_active_teacher(request)
         if not teacher_profile:
             return redirect("teacher_info_sheet")
 
         form = AnalysisRequestForm(request.POST, initial_teacher_id=teacher_profile.teacher_id)
         if not form.is_valid():
-            print("FORM ERRORS:", form.errors)
-            print("NON-FIELD ERRORS:", form.non_field_errors())
             return self._render(request, teacher_profile, form)
 
         scores = {key: form.get_scores(key) for key in FACTORS}
         profile = compute_profile(scores)
 
-        # Save AnalysisRequest immediately with empty recommendations
+        recommendation_result = None
+        if hasattr(self.recommendation_service, "get_recommendations_with_sources"):
+            recommendation_result = self.recommendation_service.get_recommendations_with_sources(scores)
+            recommendations = recommendation_result.recommendations
+            sources = recommendation_result.sources
+        else:
+            recommendations = self.recommendation_service.get_recommendations(scores)
+            sources = []
+
         analysis_request = AnalysisRequest.objects.create(
             teacher_profile=teacher_profile,
             teacher_id=teacher_profile.teacher_id,
@@ -138,49 +126,27 @@ class AnalysisFormView(View):
             student_gender=form.cleaned_data["student_gender"],
             scores=scores,
             profile=profile,
-            recommendations="",  # Empty initially, will be filled by background task
+            recommendations=recommendations,
+            sources=sources,
         )
 
-        # Update teacher statistics immediately
+        notification_service = NotificationService()
+
+        report_notification = queue_report_ready_notification(analysis_request)
+        if report_notification:
+            notification_service.send(report_notification)
+
+        feedback_notification = queue_feedback_request_if_needed(analysis_request)
+        if feedback_notification:
+            notification_service.send(feedback_notification)
+
         TeacherProfile.objects.filter(pk=teacher_profile.pk).update(
             completed_screenings_count=F("completed_screenings_count") + 1
         )
         teacher_profile.refresh_from_db()
         _restore_teacher_session(request, teacher_profile)
 
-        # Send immediate notifications (before starting background processing)
-        self._send_immediate_notifications(analysis_request)
-
-        # Start background task for recommendation generation
-        # (Report notification will be sent when recommendations are ready)
-        self.async_recommendation_service.start_background_task(analysis_request.pk, scores)
-
         return redirect("analysis_processing", pk=analysis_request.pk)
-
-    def _send_immediate_notifications(self, analysis_request: AnalysisRequest) -> None:
-        """
-        Send notifications that should be sent immediately after form submission.
-
-        This includes:
-        - Feedback request notifications (if threshold reached)
-        - Processing acknowledgment notifications (if needed in future)
-
-        Note: Report ready notifications are sent separately when recommendations are complete.
-        """
-        notification_service = NotificationService()
-
-        try:
-            # Send feedback notification if the teacher has reached the threshold
-            feedback_notification = queue_feedback_request_if_needed(analysis_request)
-            if feedback_notification:
-                notification_service.send(feedback_notification)
-                logger.info(f"Feedback notification sent immediately for request {analysis_request.pk}")
-
-            # Future: Could add processing acknowledgment notification here
-            # e.g., "Your analysis is being processed, you'll receive an email when ready"
-
-        except Exception as e:
-            logger.exception(f"Failed to send immediate notifications for request {analysis_request.pk}: {e}")
 
     def _render(self, request, teacher_profile, form):
         feedback_message = request.session.pop("feedback_message", None)
@@ -239,7 +205,7 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
-                "value": RESILIENCE_LEVEL_UKRAINIAN.get(analysis_request.profile.get(factor_key, ""), "-"),
+                "value": analysis_request.profile.get(factor_key, "-"),
             }
             for factor_key in FACTORS
         ]
