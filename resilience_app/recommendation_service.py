@@ -23,7 +23,7 @@ class RecommendationService(IRecommendationService):
     def _build_query(self, scores: dict) -> str:
         lines = [f"{FACTORS[key]['label']}: {values}" for key, values in scores.items()]
         return (
-            "A student has the following resilience factor scores:\n"
+            "Учень має наступні показники факторів стійкості:\n"
             + "\n".join(lines)
-            + "\n\nWhat recommendations can you provide to support this student's resilience?"
+            + "\n\nЯкі рекомендації ви можете надати для підтримки стійкості цього учня?"
         )

@@ -7,7 +7,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
 
-from .constants import FACTORS, FEEDBACK_TRIGGER_COUNT, GENDER_CHOICES, ID_FIELDS, TEACHER_APP_FEEDBACK_SECTIONS
+from .constants import (
+    FACTORS,
+    FEEDBACK_TRIGGER_COUNT,
+    GENDER_CHOICES,
+    ID_FIELDS,
+    RESILIENCE_LEVEL_UKRAINIAN,
+    TEACHER_APP_FEEDBACK_SECTIONS,
+)
 from .container import ResilienceContainer
 from .forms import AnalysisRequestForm, TeacherAppFeedbackForm, TeacherConsentForm, TeacherFeedbackForm
 from .models import AnalysisRequest, TeacherAppFeedback, TeacherFeedback, TeacherProfile
@@ -203,7 +210,7 @@ class AnalysisReportView(View):
         profile_rows = [
             {
                 "label": FACTORS[factor_key]["label"],
-                "value": analysis_request.profile.get(factor_key, "-"),
+                "value": RESILIENCE_LEVEL_UKRAINIAN.get(analysis_request.profile.get(factor_key, ""), "-"),
             }
             for factor_key in FACTORS
         ]
