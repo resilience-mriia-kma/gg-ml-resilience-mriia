@@ -1,6 +1,7 @@
 import csv
 import io
 
+from django.conf import settings
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -15,8 +16,7 @@ from .models import (
     TeacherFeedback,
     TeacherProfile,
 )
-from .notifications import NotificationService, queue_consent_form_notification
-from .teacher_ids import generate_teacher_id, normalize_teacher_email
+from .notifications import Notification, NotificationService, enqueue_notification
 
 
 @admin.register(TeacherProfile)
@@ -167,9 +167,8 @@ class TeacherProfileAdmin(admin.ModelAdmin):
             teacher.teacher_email = email
             teacher.save(update_fields=["teacher_email"])
 
-        notification = queue_consent_form_notification(
-            teacher_profile=teacher,
-        )
+        # Send teacher info sheet notification instead of consent form
+        notification = self._queue_teacher_info_notification(teacher)
         NotificationService().send(notification)
 
         invitation.refresh_from_db()
@@ -180,7 +179,22 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
         error_message = notification.error_message or "Unknown error"
         invitation.mark_failed(error_message)
-        raise ValueError(error_message)
+
+    def _queue_teacher_info_notification(self, teacher):
+        teacher_info_url = f"{settings.APP_BASE_URL}{reverse('teacher_info_sheet')}?teacher_id={teacher.teacher_id}"
+
+        notification = enqueue_notification(
+            notification_type=Notification.NotificationType.CONSENT_FORM,  # Reuse type for now
+            recipient_email=teacher.teacher_email,
+            subject="Запрошення до участі у дослідженні стійкості",
+            context={
+                "teacher_id": teacher.teacher_id,
+                "teacher_email": teacher.teacher_email,
+                "teacher_info_url": teacher_info_url,
+            },
+        )
+
+        return notification
 
     def send_form_view(self, request, object_id):
         teacher = get_object_or_404(TeacherProfile, pk=object_id)
@@ -202,10 +216,13 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 
     def send_form_button(self, obj):
         url = reverse("admin:resilience_app_teacherprofile_send_form", args=[obj.pk])
-        has_email = bool(obj.teacher_email) or ConsentFormInvitation.objects.filter(
-            teacher_id=obj.teacher_id,
-            teacher_email__gt="",
-        ).exists()
+        has_email = (
+            bool(obj.teacher_email)
+            or ConsentFormInvitation.objects.filter(
+                teacher_id=obj.teacher_id,
+                teacher_email__gt="",
+            ).exists()
+        )
         if not has_email:
             return format_html('<span style="color: #999;">{}</span>', "Send form unavailable")
         return format_html('<a class="button" href="{}">Send form</a>', url)

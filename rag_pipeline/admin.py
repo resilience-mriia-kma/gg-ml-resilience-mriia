@@ -45,7 +45,9 @@ class KnowledgeSourceAdmin(admin.ModelAdmin):
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
     list_display = ("title", "source", "embedding_status", "indexed_at")
+    list_editable = ("title",)
     readonly_fields = ("embedding_status", "indexed_at", "created_at", "updated_at")
+    search_fields = ("title",)
     actions = ["embed_selected"]
 
     @admin.action(description="Embed selected documents (re-index into FAISS)")

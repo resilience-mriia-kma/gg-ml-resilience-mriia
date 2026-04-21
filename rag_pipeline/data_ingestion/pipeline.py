@@ -32,8 +32,10 @@ class IngestionPipeline:
         return document
 
     def ingest_knowledge_source(self, knowledge_source: KnowledgeSource) -> Document:
-        # delegates to ingest_file, then links
+        # delegates to ingest_file, then fixes title and links
         document = self.ingest_file(knowledge_source.file.path, resilience_factor=knowledge_source.resilience_factor)
+        document.title = knowledge_source.title
+        document.save(update_fields=["title"])
 
         knowledge_source.document = document
         knowledge_source.save(update_fields=["document"])

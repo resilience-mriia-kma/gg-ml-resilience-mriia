@@ -299,18 +299,15 @@ class TeacherInfoSheetView(View):
             return redirect("analysis_form")
 
         teacher_id = request.GET.get("teacher_id", "").strip()
+
         continue_url = reverse("teacher_consent")
         if teacher_id:
             continue_url = f"{continue_url}?teacher_id={teacher_id}"
 
-        return render(
-            request,
-            self.template_name,
-            {
-                "continue_url": continue_url,
-                "has_teacher_id": bool(teacher_id),
-            },
-        )
+        context = {
+            "continue_url": continue_url,
+        }
+        return render(request, self.template_name, context)
 
 
 class TeacherConsentView(View):

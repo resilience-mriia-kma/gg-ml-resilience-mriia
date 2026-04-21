@@ -147,18 +147,29 @@ class NotificationService:
     def _send_consent_form(self, notification: Notification) -> None:
         context = notification.context
 
-        consent_url = self._absolute_url(
-            reverse("teacher_consent"),
-            query_params={"teacher_id": context["teacher_id"]},
-        )
-
-        body = (
-            "Вітаємо!\n\n"
-            "Просимо ознайомитись з інформаційним листом та надати згоду на участь у дослідженні.\n\n"
-            f"Посилання: {consent_url}\n\n"
-            "У вкладенні додано документ зі згодою.\n"
-            "Після заповнення форми готовий звіт буде надіслано на цю адресу.\n"
-        )
+        # Check if custom teacher info URL is provided (from admin action)
+        if "teacher_info_url" in context:
+            target_url = context["teacher_info_url"]
+            body = (
+                "Вітаємо!\n\n"
+                "Запрошуємо Вас взяти участь у дослідженні стійкості учнів.\n\n"
+                f"Для початку перейдіть за посиланням: {target_url}\n\n"
+                "Після заповнення форми готовий звіт буде надіслано на цю адресу.\n"
+                "Дякуємо за участь у дослідженні!\n"
+            )
+        else:
+            # Original consent form flow
+            target_url = self._absolute_url(
+                reverse("teacher_consent"),
+                query_params={"teacher_id": context["teacher_id"]},
+            )
+            body = (
+                "Вітаємо!\n\n"
+                "Просимо ознайомитись з інформаційним листом та надати згоду на участь у дослідженні.\n\n"
+                f"Посилання: {target_url}\n\n"
+                "У вкладенні додано документ зі згодою.\n"
+                "Після заповнення форми готовий звіт буде надіслано на цю адресу.\n"
+            )
 
         self._send_email(
             subject=notification.subject,
