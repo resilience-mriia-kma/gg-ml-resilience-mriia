@@ -10,7 +10,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.urls import reverse
 from django.utils import timezone
 
-from .constants import FACTORS
+from .constants import FACTORS, RESILIENCE_LEVEL_UKRAINIAN
 from .models import AnalysisRequest, Notification, TeacherProfile
 
 logger = logging.getLogger(__name__)
@@ -192,8 +192,10 @@ class NotificationService:
 
         summary_lines = []
         for factor_key, factor in FACTORS.items():
+            raw_value = analysis_request.profile.get(factor_key, '')
+            ukrainian_value = RESILIENCE_LEVEL_UKRAINIAN.get(raw_value, raw_value or '-')
             summary_lines.append(
-                f"- {factor['label']}: {analysis_request.profile.get(factor_key, '-')}"
+                f"- {factor['label']}: {ukrainian_value}"
             )
 
         recommendation_lines = self._extract_recommendation_lines(

@@ -65,29 +65,27 @@
         }
 
         .profile-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
             margin: 20px 0;
         }
 
-        .profile-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #27ae60;
+        .profile-summary ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .profile-summary li {
+            margin-bottom: 8px;
+            line-height: 1.5;
         }
 
         .profile-label {
             font-weight: 600;
             color: #2c3e50;
-            margin-bottom: 5px;
         }
 
         .profile-value {
             color: #27ae60;
             font-weight: 600;
-            text-transform: capitalize;
         }
 
         .recommendations {
@@ -125,12 +123,45 @@
             padding: 20px;
         }
 
+        .sources {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .sources ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sources li {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .source-score {
+            color: #6c757d;
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+
+        .source-content {
+            margin-top: 8px;
+            color: #495057;
+            font-style: italic;
+            font-size: 0.95em;
+            line-height: 1.4;
+            border-left: 3px solid #dee2e6;
+            padding-left: 10px;
+        }
+
         @media (max-width: 600px) {
             .info-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .profile-summary {
                 grid-template-columns: 1fr;
             }
 
@@ -177,12 +208,11 @@
 
         <h2>Профіль стійкості</h2>
         <div class="profile-summary">
-            {% for row in profile_rows %}
-                <div class="profile-item">
-                    <div class="profile-label">{{ row.label }}</div>
-                    <div class="profile-value">{{ row.value }}</div>
-                </div>
-            {% endfor %}
+            <ul>
+                {% for row in profile_rows %}
+                    <li><span class="profile-label">{{ row.label }}:</span> <span class="profile-value">{{ row.value }}</span></li>
+                {% endfor %}
+            </ul>
         </div>
 
         <h2>Рекомендації</h2>
@@ -190,6 +220,22 @@
             <div class="recommendations">
                 {{ analysis_request.recommendations|linebreaksbr }}
             </div>
+
+            {% if analysis_request.sources %}
+                <h2>Джерела</h2>
+                <div class="sources">
+                    <p><em>Рекомендації базуються на наступних джерелах:</em></p>
+                    <ul>
+                        {% for source in analysis_request.sources %}
+                            <li>
+                                <strong>{{ source.document_title }}</strong>
+                                <span class="source-score">(релевантність: {{ source.score }})</span>
+                                <div class="source-content">{{ source.content }}</div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
         {% else %}
             <div class="no-recommendations">
                 Рекомендації поки що недоступні.

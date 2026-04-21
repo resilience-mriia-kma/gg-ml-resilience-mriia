@@ -61,6 +61,11 @@ class AnalysisRequest(models.Model):
         help_text="Dict of factor_key -> low/medium/high",
     )
     recommendations = models.TextField(blank=True)
+    sources = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="List of sources used for recommendations",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     report_emailed_at = models.DateTimeField(null=True, blank=True)
