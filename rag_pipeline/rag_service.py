@@ -27,7 +27,7 @@ class RAGService(IRAGService):
         chunks = self.retrieval_service.retrieve(query, profile=profile, top_k=top_k)
 
         system_prompt = self.prompt_builder.build_system_prompt()
-        user_prompt = self.prompt_builder.build_user_prompt(query, chunks)
+        user_prompt = self.prompt_builder.build_user_prompt(query, chunks, profile=profile)
         answer = self.llm_service.generate(system_prompt, user_prompt)
 
         return RAGResponse(answer=answer, sources=chunks)

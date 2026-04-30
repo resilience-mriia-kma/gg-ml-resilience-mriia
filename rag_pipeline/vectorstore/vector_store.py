@@ -87,7 +87,28 @@ class VectorStore(IVectorStore):
 
     def _rerank_by_profile(self, results: list[SearchResult], profile: dict[str, str]) -> list[SearchResult]:
         """Rerank results based on profile match. Boost score for matching metadata."""
-        reranked = []
+        for result in results:
+            # Start with original semantic similarity score
+            boost = 0.0
+            
+            # Boost if resilience_factor matches any of the user's profile factors
+            if result.chunk.resilience_factor and result.chunk.resilience_factor in profile:
+                boost += 0.20  # 20% boost for factor match
+            
+            # Boost if target_resilience_level matches user's level for that factor
+            if result.chunk.target_resilience_level and result.chunk.resilience_factor:
+                user_level = profile.get(result.chunk.resilience_factor)
+                if user_level == result.chunk.target_resilience_level:
+                    boost += 0.30  # 30% boost for level match
+                # Slight boost even if levels differ (content still relevant)
+                elif result.chunk.target_resilience_level and user_level:
+                    boost += 0.05
+            
+            # Apply boost to score (lower is better in FAISS, so subtract)
+            result.score = result.score * (1.0 - boost)
+        
+        # Sort by boosted score (ascending, since lower is better in FAISS)
+        return sorted(results, key=lambda r: r.score)
         for result in results:
             boost = 0.0
             chunk = result.chunk
