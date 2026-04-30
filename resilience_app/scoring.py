@@ -3,8 +3,8 @@ from __future__ import annotations
 from .models import AnalysisRequest
 
 
-LOW_MAX = 0.66
-MEDIUM_MAX = 1.33
+LOW_MAX = 2.5
+MEDIUM_MAX = 4.0
 
 
 def _to_numeric(value: str) -> int | None:
