@@ -28,7 +28,7 @@ class RecommendationService(IRecommendationService):
     def get_recommendations_with_sources(self, scores: dict, profile: dict[str, str]) -> RecommendationResult:
         """Get recommendations along with sources."""
         try:
-            query = self._build_query(scores)
+            query = self._build_query(scores, profile)
             rag_response = self.rag_service.answer(query, profile=profile)
 
             # Convert sources to serializable format
@@ -50,10 +50,13 @@ class RecommendationService(IRecommendationService):
             logger.exception("RAG service failed, saving without recommendations")
             return RecommendationResult(recommendations="", sources=[])
 
-    def _build_query(self, scores: dict) -> str:
+    def _build_query(self, scores: dict, profile: dict[str, str]) -> str:
         lines = [f"{FACTORS[key]['label']}: {values}" for key, values in scores.items()]
+        profile_lines = [f"{FACTORS[key]['label']}: {level}" for key, level in profile.items()]
         return (
             "Учень має наступні показники факторів стійкості:\n"
             + "\n".join(lines)
+            + "\n\nПрофіль стійкості учня:\n"
+            + "\n".join(profile_lines)
             + "\n\nЯкі рекомендації ви можете надати для підтримки стійкості цього учня?"
         )
