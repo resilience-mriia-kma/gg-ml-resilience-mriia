@@ -6,4 +6,9 @@ if TYPE_CHECKING:
 
 class IRecommendationService(Protocol):
     def get_recommendations(self, scores: dict) -> str: ...
-    def get_recommendations_with_sources(self, scores: dict) -> "RecommendationResult": ...
+
+    def get_recommendations_with_sources(
+        self,
+        scores: dict,
+        profile: dict[str, str] | None = None,
+    ) -> "RecommendationResult": ...
