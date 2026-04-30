@@ -47,6 +47,7 @@ class DocumentRepository(IDocumentRepository):
                     document=document,
                     content=chunk.content,
                     resilience_factor=chunk.resilience_factor,
+                    category=chunk.category,
                     token_count=chunk.token_count,
                     chunk_index=chunk.chunk_index,
                 )
