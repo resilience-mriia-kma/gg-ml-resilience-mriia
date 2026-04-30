@@ -98,6 +98,39 @@
             font-weight: 600;
         }
 
+        .level-explanations {
+            margin: 18px 0 24px;
+            padding: 16px 18px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .level-explanations h3 {
+            margin: 0 0 10px;
+            color: #34495e;
+            font-size: 1.05em;
+        }
+
+        .profile-note {
+            margin: 0 0 12px;
+            color: #475569;
+        }
+
+        .level-explanations ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .level-explanations li {
+            margin-bottom: 10px;
+        }
+
+        .level-explanations li:last-child {
+            margin-bottom: 0;
+        }
+
         .recommendations {
             background: #fefefe;
             border: 1px solid #e9ecef;
@@ -212,10 +245,23 @@
             </ul>
         </div>
 
+        <div class="level-explanations">
+            <h3>Як читати рівні</h3>
+            <p class="profile-note">{{ profile_note }}</p>
+            <ul>
+                {% for explanation in level_explanations %}
+                    <li>
+                        <span class="profile-level-{{ explanation.level }}">{{ explanation.label|capfirst }}:</span>
+                        {{ explanation.description }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
         <h2>Рекомендації</h2>
-        {% if analysis_request.recommendations %}
+        {% if recommendations %}
             <div class="recommendations">
-                {{ analysis_request.recommendations|linebreaksbr }}
+                {{ recommendations|linebreaksbr }}
             </div>
 
             {% if sources %}

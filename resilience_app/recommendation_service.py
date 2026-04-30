@@ -1,10 +1,10 @@
 import logging
+import re
 from dataclasses import dataclass
-from typing import List
 
 from rag_pipeline.protocols import IRAGService
 
-from .constants import FACTORS
+from .constants import FACTORS, RESILIENCE_LEVEL_UKRAINIAN
 from .protocols import IRecommendationService
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RecommendationResult:
     recommendations: str
-    sources: List[dict]
+    sources: list[dict]
 
 
 class RecommendationService(IRecommendationService):
@@ -25,11 +25,16 @@ class RecommendationService(IRecommendationService):
         result = self.get_recommendations_with_sources(scores)
         return result.recommendations
 
-    def get_recommendations_with_sources(self, scores: dict, profile: dict[str, str]) -> RecommendationResult:
+    def get_recommendations_with_sources(
+        self,
+        scores: dict,
+        profile: dict[str, str] | None = None,
+    ) -> RecommendationResult:
         """Get recommendations along with sources."""
         try:
             query = self._build_query(scores, profile)
             rag_response = self.rag_service.answer(query, profile=profile)
+            answer = self._normalize_recommendation_text(rag_response.answer)
 
             # Convert sources to serializable format
             sources = [
@@ -43,20 +48,58 @@ class RecommendationService(IRecommendationService):
             ]
 
             return RecommendationResult(
-                recommendations=rag_response.answer,
+                recommendations=answer,
                 sources=sources
             )
         except Exception:
             logger.exception("RAG service failed, saving without recommendations")
             return RecommendationResult(recommendations="", sources=[])
 
-    def _build_query(self, scores: dict, profile: dict[str, str]) -> str:
+    def _build_query(self, scores: dict, profile: dict[str, str] | None) -> str:
         lines = [f"{FACTORS[key]['label']}: {values}" for key, values in scores.items()]
-        profile_lines = [f"{FACTORS[key]['label']}: {level}" for key, level in profile.items()]
-        return (
-            "Учень має наступні показники факторів стійкості:\n"
-            + "\n".join(lines)
-            + "\n\nПрофіль стійкості учня:\n"
-            + "\n".join(profile_lines)
-            + "\n\nЯкі рекомендації ви можете надати для підтримки стійкості цього учня?"
+        profile_lines = [
+            f"{FACTORS[key]['label']}: {RESILIENCE_LEVEL_UKRAINIAN.get(level, level)}"
+            for key, level in (profile or {}).items()
+        ]
+        low_factors = self._factor_labels_by_level(profile, "low")
+        medium_factors = self._factor_labels_by_level(profile, "medium")
+        high_factors = self._factor_labels_by_level(profile, "high")
+
+        priority_lines = []
+        if low_factors:
+            priority_lines.append(f"Пріоритет підтримки: {', '.join(low_factors)}.")
+        if medium_factors:
+            priority_lines.append(f"Зони для розвитку/тренування: {', '.join(medium_factors)}.")
+        if high_factors:
+            priority_lines.append(f"Сильні сторони, які можна використати як ресурс: {', '.join(high_factors)}.")
+
+        profile_block = (
+            "\n\nПрофіль стійкості учня/учениці:\n" + "\n".join(profile_lines)
+            if profile_lines
+            else ""
         )
+        priority_block = "\n\n" + "\n".join(priority_lines) if priority_lines else ""
+
+        return (
+            "Учень/учениця має такі показники факторів стійкості:\n"
+            + "\n".join(lines)
+            + profile_block
+            + priority_block
+            + "\n\nНадай рівно 3 практичні рекомендації українською мовою. "
+            + "Кожна рекомендація має бути персоналізована під наведений профіль, а не універсальна для всіх. "
+            + "Для кожної рекомендації вкажи фактор і рівень, конкретну дію, перший крок, тривалість, частоту, "
+            + "залучених людей, ознаку успіху та умову, коли треба звернутися по допомогу. "
+            + "Якщо фактор має високий рівень, використовуй його як ресурс і не описуй як проблему."
+        )
+
+    def _factor_labels_by_level(self, profile: dict[str, str] | None, level: str) -> list[str]:
+        return [
+            FACTORS[key]["label"]
+            for key, profile_level in (profile or {}).items()
+            if profile_level == level and key in FACTORS
+        ]
+
+    def _normalize_recommendation_text(self, answer: str) -> str:
+        """Keep source labels visually separated even when the LLM appends them to the conclusion."""
+        normalized = re.sub(r"(?<!\n)\s+(Джерел[ао]:)", r"\n\n\1", answer.strip())
+        return re.sub(r"\n{3,}(Джерел[ао]:)", r"\n\n\1", normalized)

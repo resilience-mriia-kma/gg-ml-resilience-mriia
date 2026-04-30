@@ -1,4 +1,5 @@
 import logging
+import re
 
 from dependency_injector.wiring import Provide, inject
 from django.db.models import F
@@ -16,7 +17,9 @@ from .constants import (
     FEEDBACK_TRIGGER_COUNT,
     GENDER_CHOICES,
     ID_FIELDS,
+    RESILIENCE_LEVEL_EXPLANATIONS,
     RESILIENCE_LEVEL_UKRAINIAN,
+    RESILIENCE_PROFILE_NOTE,
     TEACHER_APP_FEEDBACK_SECTIONS,
 )
 from .container import ResilienceContainer
@@ -31,6 +34,11 @@ from .notifications import NotificationService, queue_feedback_request_if_needed
 from .scoring import compute_profile
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_recommendation_source_linebreaks(recommendations: str) -> str:
+    normalized = re.sub(r"(?<!\n)\s+(Джерел[ао]:)", r"\n\n\1", recommendations.strip())
+    return re.sub(r"\n{3,}(Джерел[ао]:)", r"\n\n\1", normalized)
 
 
 def index(request):
@@ -272,9 +280,13 @@ class AnalysisReportView(View):
             for factor_key in FACTORS
         ]
 
+        recommendations = _normalize_recommendation_source_linebreaks(
+            analysis_request.recommendations
+        )
+
         recommendation_lines = [
             line.strip()
-            for line in analysis_request.recommendations.splitlines()
+            for line in recommendations.splitlines()
             if line.strip()
         ]
 
@@ -298,7 +310,17 @@ class AnalysisReportView(View):
             self.template_name,
             {
                 "analysis_request": analysis_request,
+                "recommendations": recommendations,
                 "profile_rows": profile_rows,
+                "level_explanations": [
+                    {
+                        "level": level,
+                        "label": RESILIENCE_LEVEL_UKRAINIAN[level],
+                        "description": description,
+                    }
+                    for level, description in RESILIENCE_LEVEL_EXPLANATIONS.items()
+                ],
+                "profile_note": RESILIENCE_PROFILE_NOTE,
                 "recommendation_lines": recommendation_lines,
                 "sources": grouped_sources,
             },
