@@ -21,3 +21,15 @@ class ResilienceFactor(models.TextChoices):
     GOAL_DIRECTEDNESS = "goal_directedness", "Goal-Directedness / Coping"
     SOCIAL_CONNECTIONS = "social_connections", "Social Connections"
     HEALTH = "health", "Health"
+
+
+class TargetResilienceLevel(models.TextChoices):
+    LOW = "low", "Low"
+    MEDIUM = "medium", "Medium"
+    HIGH = "high", "High"
+
+
+class ImplementationDifficulty(models.TextChoices):
+    EASY = "easy", "Easy"
+    MEDIUM = "medium", "Medium"
+    HARD = "hard", "Hard"

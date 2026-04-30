@@ -1,6 +1,6 @@
 from django.db import models
 
-from .constants import EmbeddingStatus, ResilienceFactor, SourceType
+from .constants import EmbeddingStatus, ImplementationDifficulty, ResilienceFactor, SourceType, TargetResilienceLevel
 from .mixins import TimestampMixin
 
 
@@ -34,6 +34,13 @@ class DocumentChunk(TimestampMixin):
     content = models.TextField(null=False, blank=False)
     resilience_factor = models.CharField(
         max_length=64, blank=True, db_index=True, choices=ResilienceFactor.choices
+    )
+    category = models.CharField(max_length=128, blank=True, db_index=True)
+    target_resilience_level = models.CharField(
+        max_length=16, blank=True, db_index=True, choices=TargetResilienceLevel.choices
+    )
+    implementation_difficulty = models.CharField(
+        max_length=16, blank=True, db_index=True, choices=ImplementationDifficulty.choices
     )
     token_count = models.PositiveIntegerField(default=0)
     chunk_index = models.PositiveIntegerField(default=0)
