@@ -23,8 +23,8 @@ class RAGService(IRAGService):
         self.llm_service = llm_service
         self.prompt_builder = prompt_builder
 
-    def answer(self, query: str, *, top_k: int = 5) -> RAGResponse:
-        chunks = self.retrieval_service.retrieve(query, top_k=top_k)
+    def answer(self, query: str, *, profile: dict[str, str] | None = None, top_k: int = 5) -> RAGResponse:
+        chunks = self.retrieval_service.retrieve(query, profile=profile, top_k=top_k)
 
         system_prompt = self.prompt_builder.build_system_prompt()
         user_prompt = self.prompt_builder.build_user_prompt(query, chunks)

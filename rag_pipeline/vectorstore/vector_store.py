@@ -57,10 +57,10 @@ class VectorStore(IVectorStore):
         logger.info(f"Removed {len(chunk_ids)} chunks for document {document.pk}")
         return len(chunk_ids)
 
-    def search(self, query: str, k: int = 10) -> list[SearchResult]:
+    def search(self, query: str, *, profile: dict[str, str] | None = None, k: int = 10) -> list[SearchResult]:
         """Embed query, search index, hydrate from DB preserving rank order."""
         query_vec = np.array(self.embedder.embed(query), dtype=np.float32).reshape(1, -1)
-        distances, ids = self.index.search(query_vec, k)
+        distances, ids = self.index.search(query_vec, k=max(k, 50))  # Get more for reranking
 
         valid_mask = ids[0] != -1
         chunk_ids = ids[0][valid_mask].tolist()
@@ -78,6 +78,42 @@ class VectorStore(IVectorStore):
                 results.append(SearchResult(chunk=chunk, score=score))
             else:
                 logger.warning(f"Chunk {cid} found in index but missing from DB (drift)")
+
+        # Apply metadata-based reranking if profile provided
+        if profile:
+            results = self._rerank_by_profile(results, profile)
+
+        return results[:k]
+
+    def _rerank_by_profile(self, results: list[SearchResult], profile: dict[str, str]) -> list[SearchResult]:
+        """Rerank results based on profile match. Boost score for matching metadata."""
+        reranked = []
+        for result in results:
+            boost = 0.0
+            chunk = result.chunk
+
+            # Boost if resilience_factor matches any low/medium factor in profile
+            if chunk.resilience_factor:
+                for factor, level in profile.items():
+                    if level in ('low', 'medium') and chunk.resilience_factor == factor:
+                        boost += 0.2  # Boost for relevant factors
+
+            # Boost if target_resilience_level matches
+            if chunk.target_resilience_level:
+                # If student has low in a factor, prefer chunks targeting low
+                for factor, level in profile.items():
+                    if chunk.target_resilience_level == level:
+                        boost += 0.3  # Strong boost for level match
+
+            # Slight boost for category match (if we had category logic)
+            # For now, just factor and level
+
+            new_score = result.score * (1 + boost)
+            reranked.append(SearchResult(chunk=chunk, score=new_score))
+
+        # Sort by new score descending
+        reranked.sort(key=lambda r: r.score, reverse=True)
+        return reranked
 
         return results
 

@@ -7,7 +7,7 @@ class RetrievalService(IRetrievalService):
     def __init__(self, vector_store: IVectorStore) -> None:
         self.vector_store = vector_store
 
-    def retrieve(self, query: str, *, top_k: int = 5) -> list[RetrievalResult]:
+    def retrieve(self, query: str, *, profile: dict[str, str] | None = None, top_k: int = 5) -> list[RetrievalResult]:
         results = self.vector_store.search(query, k=top_k)
         return [
             RetrievalResult(

@@ -165,6 +165,7 @@ class AnalysisFormView(View):
         self.async_recommendation_service.start_background_task(
             analysis_request.pk,
             scores,
+            profile,
         )
 
         return redirect("analysis_processing", pk=analysis_request.pk)

@@ -25,11 +25,11 @@ class RecommendationService(IRecommendationService):
         result = self.get_recommendations_with_sources(scores)
         return result.recommendations
 
-    def get_recommendations_with_sources(self, scores: dict) -> RecommendationResult:
+    def get_recommendations_with_sources(self, scores: dict, profile: dict[str, str]) -> RecommendationResult:
         """Get recommendations along with sources."""
         try:
             query = self._build_query(scores)
-            rag_response = self.rag_service.answer(query)
+            rag_response = self.rag_service.answer(query, profile=profile)
 
             # Convert sources to serializable format
             sources = [

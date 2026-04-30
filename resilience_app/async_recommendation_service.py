@@ -16,12 +16,12 @@ class AsyncRecommendationService:
         self.recommendation_service = recommendation_service
         self.executor = ThreadPoolExecutor(max_workers=2)
 
-    async def generate_recommendations_async(self, analysis_request_id: int, scores: dict) -> str | None:
+    async def generate_recommendations_async(self, analysis_request_id: int, scores: dict, profile: dict[str, str]) -> str | None:
         try:
             logger.info(f"Starting async recommendation generation for request {analysis_request_id}")
 
             result = await asyncio.get_event_loop().run_in_executor(
-                self.executor, self.recommendation_service.get_recommendations_with_sources, scores
+                self.executor, self.recommendation_service.get_recommendations_with_sources, scores, profile
             )
 
             if result.recommendations:
@@ -89,7 +89,7 @@ class AsyncRecommendationService:
 
         await asyncio.get_event_loop().run_in_executor(self.executor, send_notification)
 
-    def start_background_task(self, analysis_request_id: int, scores: dict) -> None:
+    def start_background_task(self, analysis_request_id: int, scores: dict, profile: dict[str, str]) -> None:
         import threading
 
         def run_async_task():
@@ -100,7 +100,7 @@ class AsyncRecommendationService:
                 asyncio.set_event_loop(loop)
 
                 # run async task
-                loop.run_until_complete(self.generate_recommendations_async(analysis_request_id, scores))
+                loop.run_until_complete(self.generate_recommendations_async(analysis_request_id, scores, profile))
 
                 logger.info(f"Background recommendation task completed for request {analysis_request_id}")
             except Exception as e:
