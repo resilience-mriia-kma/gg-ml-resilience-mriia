@@ -37,8 +37,10 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_recommendation_source_linebreaks(recommendations: str) -> str:
-    normalized = re.sub(r"(?<!\n)\s+(Джерел[ао]:)", r"\n\n\1", recommendations.strip())
-    return re.sub(r"\n{3,}(Джерел[ао]:)", r"\n\n\1", normalized)
+    normalized = recommendations.strip()
+    normalized = re.sub(r"^\s*Рекомендації\s*\n+", "", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"\n*\s*Джерел[ао]:.*\Z", "", normalized, flags=re.IGNORECASE | re.DOTALL)
+    return normalized.strip()
 
 
 def index(request):
